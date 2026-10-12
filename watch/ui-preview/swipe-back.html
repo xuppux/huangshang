@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>右边缘滑动返回 · 改成触发式 · 黄山派手表</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --line:#dfe3e8; --line2:#eef1f4;
+    --tx:#1f2328; --tx2:#59636e; --tx3:#8b949e;
+    --accent:#e07000; --blue:#1565c0; --green:#1a7f37; --red:#c62828;
+    --edge:#cfe3ff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--tx);
+    font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:30px 22px 64px}
+
+  h1{font-size:25px;margin:0 0 8px;letter-spacing:-.2px}
+  .lede{color:var(--tx2);font-size:14.5px;margin:0 0 6px}
+  .lede b{color:var(--tx)}
+  .meta{color:var(--tx3);font-size:12.5px;margin-top:14px;font-family:ui-monospace,Menlo,Consolas,monospace}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:20px 22px;margin-top:18px;
+  }
+  h2{font-size:15.5px;margin:0 0 14px;display:flex;align-items:center;gap:9px}
+  h2::before{content:"";width:3px;height:15px;border-radius:2px;background:var(--accent)}
+  h2 .sub{font-weight:400;color:var(--tx3);font-size:12.5px}
+
+  .cols{display:grid;grid-template-columns:auto 1fr;gap:30px;align-items:start}
+  @media (max-width:900px){.cols{grid-template-columns:1fr}}
+
+  /* ── 模拟屏 ── */
+  .stage{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .phone{
+    position:relative;width:390px;height:450px;border-radius:26px;
+    background:#fff;border:1px solid #cfd6dd;overflow:hidden;
+    box-shadow:0 3px 14px rgba(20,30,50,.09);cursor:crosshair;user-select:none;
+  }
+  .scr{position:absolute;inset:0;background:#fff;will-change:transform}
+  .scr.prev{background:#f9fbfd}
+
+  /* 上一页（蜂窝）示意 */
+  .hexdot{
+    position:absolute;border-radius:50%;background:#fff;border:1px solid #d5dde5;
+    display:flex;align-items:center;justify-content:center;font-size:11px;color:#7b8794;
+  }
+  .hexdot.c{background:#eef5ff;border-color:#bcd8ff}
+
+  /* 当前页（计算器）*/
+  .appbar{
+    position:absolute;left:0;right:0;top:0;height:34px;
+    display:flex;align-items:center;padding:0 14px;
+    color:var(--tx2);font-size:12px;border-bottom:1px solid var(--line2);
+  }
+  .card-mock{
+    position:absolute;left:14px;top:34px;width:362px;height:136px;
+    background:#f7f9fb;border:1px solid var(--line2);border-radius:10px;
+    display:flex;flex-direction:column;justify-content:flex-end;padding:14px 16px;gap:6px;
+  }
+  .mock-expr{color:var(--tx3);font-size:13px;text-align:right}
+  .mock-res{color:var(--tx);font-size:30px;font-weight:300;text-align:right;letter-spacing:-.5px}
+  .pad{position:absolute;left:15px;top:180px;width:360px;height:260px}
+  .key{
+    position:absolute;height:48px;border-radius:9px;background:#fff;
+    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+    font-size:16px;color:var(--tx);
+  }
+  .key.op{color:var(--accent)}
+
+  /* 右边缘检测条 */
+  .edge{
+    position:absolute;top:0;bottom:0;right:0;width:16px;
+    background:repeating-linear-gradient(45deg,#dbeafe 0 4px,#eff6ff 4px 8px);
+    border-left:1px dashed #93c5fd;pointer-events:none;
+  }
+  .edge.hot{background:rgba(21,101,192,.20);border-left:1px dashed var(--blue)}
+  .edge .lb{
+    position:absolute;top:8px;left:50%;transform:translateX(-50%);
+    font-size:9px;color:var(--blue);writing-mode:vertical-rl;letter-spacing:1px;
+  }
+  .thresh{
+    position:absolute;top:0;bottom:0;pointer-events:none;left:244px;
+    border-left:1px dashed #f0a020;opacity:0;transition:opacity .15s;
+  }
+  .thresh.on{opacity:1}
+  .thresh .t{
+    position:absolute;top:6px;left:5px;font-size:10px;color:#b8730a;
+    background:#fff6e6;border:1px solid #f5d9a8;border-radius:4px;padding:1px 5px;white-space:nowrap;
+  }
+
+  /* 右边缘那条指示条 —— 这一版新增的"即时反馈" */
+  .ind{
+    position:absolute;right:0;top:197px;width:5px;height:56px;border-radius:3px;
+    background:#fff;opacity:0;pointer-events:none;
+    transition:opacity .08s linear,background-color .08s linear;
+    box-shadow:0 0 5px rgba(0,0,0,.18);
+  }
+  .ind.on{opacity:.42}
+  .ind.armed{opacity:.95;background:#3b82f6}
+
+  .hint{font-size:12.5px;color:var(--tx3);text-align:center;max-width:400px}
+  .hint b{color:var(--blue)}
+
+  /* ── 读数 ── */
+  .readout{display:flex;flex-direction:column;gap:14px}
+  .big{display:flex;align-items:baseline;gap:10px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .big .n{font-size:40px;font-weight:600;letter-spacing:-1px;line-height:1;color:var(--tx)}
+  .big .u{font-size:12.5px;color:var(--tx3)}
+
+  .bar{height:11px;border-radius:6px;background:#eaeef2;position:relative;overflow:hidden}
+  .bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--blue);border-radius:6px}
+  .bar u{position:absolute;left:33.3%;top:-4px;bottom:-4px;width:0;border-left:2px solid #f0a020}
+  .barlab{display:flex;justify-content:space-between;font-size:11.5px;color:var(--tx3);margin-top:5px;font-family:ui-monospace,monospace}
+
+  .verdict{
+    padding:11px 15px;border-radius:9px;font-size:14px;font-weight:600;
+    border:1px solid var(--line);background:#fafbfc;color:var(--tx2);
+  }
+  .verdict.go{background:#fff1f0;border-color:#ffcdd2;color:var(--red)}
+  .verdict.back{background:#f1f8ff;border-color:#cfe3ff;color:var(--blue)}
+  .verdict small{display:block;font-weight:400;font-size:12px;margin-top:3px;color:var(--tx2)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line2);vertical-align:top}
+  th{color:var(--tx3);font-weight:500;font-size:12px;background:#fafbfc}
+  td code,code.k{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.2px;
+    background:#f2f5f8;border:1px solid #e3e8ed;border-radius:4px;padding:1px 5px;color:#0b4f9e;
+  }
+  .ok{color:var(--green);font-weight:600}
+  .no{color:var(--tx3)}
+
+  pre.log{
+    background:#fbfcfd;border:1px solid var(--line);border-radius:9px;
+    padding:13px 15px;font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:12.2px;line-height:1.7;color:#37414c;overflow:auto;margin:0;
+  }
+  pre.log .g{color:var(--green);font-weight:600}
+  pre.log .b{color:var(--blue)}
+  pre.log .r{color:var(--red);font-weight:600}
+  pre.log .d{color:var(--tx3)}
+  .loghead{font-size:12.5px;color:var(--tx3);margin:16px 0 7px;font-weight:600}
+
+  .note{
+    border-left:3px solid #f0a020;background:#fffaf0;border-radius:0 8px 8px 0;
+    padding:12px 16px;font-size:13.2px;color:#5c4a22;margin-top:14px;
+  }
+  .note b{color:#8a5a00}
+  .note.blue{border-left-color:var(--blue);background:#f5f9ff;color:#33475b}
+  .note.blue b{color:#0b4f9e}
+  .note.red{border-left-color:var(--red);background:#fff5f5;color:#5c2a2a}
+  .note.red b{color:#a01b1b}
+  .note.green{border-left-color:var(--green);background:#f4fbf6;color:#204d32}
+  .note.green b{color:#0f5c26}
+  ul{margin:8px 0 0;padding-left:20px}
+  li{margin:5px 0}
+  .kbd{
+    display:inline-block;font-family:ui-monospace,monospace;font-size:12px;
+    border:1px solid #cfd6dd;border-bottom-width:2px;border-radius:5px;
+    padding:1px 6px;background:#fff;color:var(--tx);
+  }
+
+  /* 问题块 */
+  .issue{border:1px solid var(--line);border-radius:10px;padding:15px 17px;margin-bottom:13px;background:#fdfdfe}
+  .issue:last-child{margin-bottom:0}
+  .issue h3{margin:0 0 9px;font-size:13.5px;display:flex;align-items:flex-start;gap:8px}
+  .tag{
+    flex:none;font-size:11px;font-weight:600;border-radius:5px;padding:2px 7px;margin-top:1px;
+    background:#fdecea;color:#b3261e;border:1px solid #f7cdc8;
+  }
+  .tag.fix{background:#e8f5ec;color:#1a7f37;border-color:#c6e6d1}
+  .issue .why{font-size:13px;color:var(--tx2);margin:0 0 9px}
+  .issue .why b{color:var(--tx)}
+  .issue .fixline{
+    font-size:12.8px;color:#1a7f37;background:#f4fbf6;border:1px solid #d8ecdf;
+    border-radius:7px;padding:9px 12px;
+  }
+  .issue .fixline b{color:#0f5c26}
+  .issue code.k{font-size:11.8px}
+  .chain{
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.9;
+    background:#fbfcfd;border:1px solid var(--line);border-radius:8px;padding:11px 13px;margin:9px 0 0;
+    color:#37414c;overflow:auto;
+  }
+  .chain .hl{color:var(--red);font-weight:600}
+  .chain .gd{color:var(--green)}
+  .chain .dm{color:var(--tx3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>右边缘滑动返回 · 改成触发式</h1>
+  <p class="lede">
+    上一版是「画面跟着手指走」（跟手）。它在真机上会把界面卡死 ——
+    <b>返回之后蜂窝看得见、点哪都没反应</b>。这一版把方向换掉了：
+    <b>手势只负责判断"要不要返回"，返回动画交给框架自己播。</b>
+  </p>
+  <p class="meta">黄山派 SF32LB52-ULP · LVGL v8 · 390×450 · 固件 main.bin 2,537,916 B · 2026-09-22</p>
+
+  <!-- ═══════════════════ 1. 试一试 ═══════════════════ -->
+  <div class="card">
+    <h2>先在这儿试一把 <span class="sub">鼠标当手指：从最右边往里划，然后松手</span></h2>
+
+    <div class="cols">
+      <div class="stage">
+        <div class="phone" id="phone">
+          <!-- 上一页：蜂窝 -->
+          <div class="scr prev" id="scrPrev">
+            <div class="hexdot c" style="left:150px;top:150px;width:62px;height:62px">计算器</div>
+            <div class="hexdot"   style="left:88px;top:196px;width:58px;height:58px">时钟</div>
+            <div class="hexdot"   style="left:212px;top:196px;width:58px;height:58px">内存</div>
+            <div class="hexdot"   style="left:124px;top:242px;width:58px;height:58px">音乐</div>
+            <div class="hexdot"   style="left:186px;top:242px;width:58px;height:58px">设置</div>
+            <div style="position:absolute;left:0;right:0;top:64px;text-align:center;color:#8b949e;font-size:12px">主菜单 / 蜂窝</div>
+          </div>
+          <!-- 当前页：计算器 -->
+          <div class="scr" id="scr">
+            <div class="appbar">计算器</div>
+            <div class="card-mock">
+              <div class="mock-expr">12 × 8 =</div>
+              <div class="mock-res">96</div>
+            </div>
+            <div class="pad" id="pad"></div>
+          </div>
+          <!-- 右边缘指示条（固件里也是这样一条） -->
+          <div class="ind" id="ind"></div>
+          <div class="edge" id="edge"><span class="lb">滑动区</span></div>
+          <div class="thresh" id="thresh"><span class="t">划过这里松手 = 返回</span></div>
+        </div>
+        <div class="hint">
+          手指（鼠标）落在最右边那条虚线里按下，往左拖。注意：
+          <b>画面不会跟着动</b> —— 动的是右边缘那条小竖条。
+        </div>
+      </div>
+
+      <div class="readout">
+        <div class="big"><span class="n" id="nDx">0</span><span class="u">px &nbsp;← 往左划的距离</span></div>
+
+        <div>
+          <div class="bar"><i id="barFill"></i><u></u></div>
+          <div class="barlab"><span>0</span><span>返回线 130px（屏宽 1/3）</span><span>390</span></div>
+        </div>
+
+        <div class="verdict" id="verdict">
+          <span id="vMain">等待滑动</span>
+          <small id="vSub">从右边缘往里划超过 130px 再松手</small>
+        </div>
+
+        <div>
+          <div class="loghead" style="margin-top:2px">这一版的手势状态（和固件一一对应）</div>
+          <table>
+            <tr><th style="width:44%">动作</th><th>结果</th></tr>
+            <tr><td>往左划 &lt; 8px</td><td class="no">当误碰，连指示条都不出</td></tr>
+            <tr><td>往左划 ≥ 8px</td><td>指示条出现（半透明白）</td></tr>
+            <tr><td>往左划 ≥ 130px</td><td class="ok">指示条变蓝变实 —— 松手就返回</td></tr>
+            <tr><td>60px 以上且 ≥0.8px/ms</td><td class="ok">算快甩，也算数（不用划到 130）</td></tr>
+            <tr><td>松手时不满条件</td><td class="no">什么都不做，页面纹丝不动</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ 2. 卡死的根因 ═══════════════════ -->
+  <div class="card">
+    <h2>上一版为什么会把蜂窝卡死 <span class="sub">根因不是"写得不够好"，是这条路本身有语义冲突</span></h2>
+
+    <p class="lede" style="margin-bottom:14px">
+      上一版用手指驱动框架的<b>手动转场</b>接口：<code class="k">gui_app_manual_animation_start()</code>
+      → 一路 <code class="k">update(process)</code> → 松手 <code class="k">stop(process)</code>。
+      问题出在松手那一步：这个接口对「取消」和「完成」的处理方式不一样。
+    </p>
+
+    <div class="issue">
+      <h3><span class="tag">根因</span><span>「没划够 → 弹回」在框架眼里是「这次转场作废」，而作废的收尾会<b>回滚页面状态</b></span></h3>
+      <p class="why">
+        SDK 用动画的<b>结束值</b>来判断这次转场是"完成"还是"取消"：结束值是 0 就是取消。
+        而手势的"弹回"恰好就是"回到 0"。取消之后的收尾回调不会切页，而是<b>把页面状态倒回去</b>。
+      </p>
+      <div class="chain">
+<span class="dm">// middleware/app_fwk/app_trans_anim_port.c:56  —— 结束值决定语义</span>
+if (0 == a-&gt;end_value) res = <span class="hl">TRANS_RES_ABORTED</span>;   <span class="dm">// 取消，留在出发页</span>
+else                    res = TRANS_RES_FINISHED;  <span class="dm">// 真的切页</span>
+
+<span class="dm">// middleware/app_fwk/app_schedule.c:1336  —— 取消之后要"倒回去"</span>
+if (<span class="hl">TRANS_RES_ABORTED</span> == res) {
+    page_set_target_state(trans_anim_pg_exit,  page_st_resumed);   <span class="dm">// 出发页：恢复</span>
+    page_set_target_state(trans_anim_pg_enter, <span class="hl">page_st_paused</span>);    <span class="dm">// 目标页：暂停</span>
+    app_resume(&amp;trans_anim_pg_exit-&gt;parent-&gt;node);               <span class="dm">// 恢复出发 app</span>
+}
+      </div>
+      <p class="why" style="margin-top:11px">
+        到这里都还是对的 —— 如果那次返回<b>还没执行</b>的话。但上一版为了让"返回主菜单"这条路也能有跟手动画，
+        我改了 SDK 的一行，让返回消息在 handler 里就<b>先把 app 退掉</b>（<code class="k">app_goback()</code>），
+        然后才去搭动画。于是顺序变成了：
+      </p>
+      <div class="chain">
+1. 手指划过阈值 → 消息进来 → <span class="gd">先真的返回了</span>（蜂窝 RESUMED）  <span class="dm">← 已经发生了</span>
+2. 框架搭起转场，等手指继续驱动
+3. 手指划得不够 → 松手 → 结束值 = 0 → <span class="hl">ABORTED</span>
+4. 收尾回调按"作废"处理：<span class="hl">暂停蜂窝</span>、恢复计算器        <span class="dm">← 和第 1 步冲突</span>
+      </div>
+      <p class="why" style="margin-top:11px">
+        结果就是状态错位：<b>蜂窝的画面还在屏幕上，但框架认为它是 paused</b>。
+        画面是 LVGL 画的，照样在刷新；可 app 层的事件分发已经停了 —— 点哪个图标都没反应。
+        这就是你看到的那个现象，也是我上一轮改 SDK 引进来的。
+      </p>
+      <div class="fixline">
+        <b>这一版的处理：完全不用手动跟手那条路。</b>
+        手势只判断"要不要返回"，返回动作交给 <code class="k">gui_app_goback()</code> 走框架原生的
+        free-run 转场 —— 那条路的结束值是固定的，没有"作废回滚"这个分支。
+        同时把我上一轮改的 SDK 那一行<b>还原了</b>（<code class="k">git status</code> 已干净）。
+      </div>
+    </div>
+
+    <div class="issue">
+      <h3><span class="tag">顺带</span><span>上一版还会在滑动开始时去改「当前页」的转场配置，而且不还原</span></h3>
+      <p class="why">
+        为了让跟手动画用水平平移，上一版调了
+        <code class="k">gui_app_set_enter_trans_anim()</code> / <code class="k">gui_app_set_exit_trans_anim()</code> /
+        <code class="k">gui_app_set_trans_anim_prio()</code>。这三个接口写的是<b>当前页</b>的配置 ——
+        在蜂窝上滑一次，就会把蜂窝自己的转场配置改掉，且不会自动恢复，影响之后所有转场。
+      </p>
+      <div class="fixline"><b>这一版一个字都不碰这类接口。</b>动画只用"配置里本来就有"的那套（见下一节）。</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ 3. 改了什么 ═══════════════════ -->
+  <div class="card">
+    <h2>这次改了什么 <span class="sub">四件事，每件都有依据</span></h2>
+
+    <div class="issue">
+      <h3><span class="tag fix">改 1</span><span>手势改成<b>触发式</b>：不再跟手，页面全程不动</span></h3>
+      <p class="why">
+        手指在右边缘划的过程中，页面一个像素都不动，动的只有右边缘那条指示条。
+        松手时判定（划够 130px，或者快甩 60px 以上），判定通过就触发一次完整的返回动画。
+      </p>
+      <div class="fixline">
+        <b>好处：</b>不再往框架的转场状态机里灌中间态 —— 上一版所有的坑都出在这里。
+        另外动画是"整整一段"播完，而不是像跟手那样被手指的采样节奏一段段拽着走，观感反而更完整。
+      </div>
+    </div>
+
+    <div class="issue">
+      <h3><span class="tag fix">改 2</span><span>为什么<b>松手才触发</b>，而不是划到阈值马上触发</span></h3>
+      <p class="why">
+        框架在转场开始的那一刻会把整个触摸设备复位
+        （<code class="k">lv_indev_reset(NULL, NULL)</code>，见 <code class="k">gui_app_trans_anim.c:479</code>）。
+        如果那时候手指还按在屏幕上，LVGL 会把"当前还按着"当成一次<b>全新的按下</b>并重新做命中测试 ——
+        而那一刻手指多半已经划到屏幕中间，正好落在蜂窝某个图标上，于是<b>松手就把那个 app 点开了</b>
+        （这也正是你更早反馈过的"误触"）。等松手再触发，这个问题从根上不存在。
+      </p>
+      <div class="fixline">
+        <b>即时反馈由指示条负责</b>：越过 130px 的那一瞬间它就变蓝变实，不需要等到松手才知道"这一下算数"。
+      </div>
+    </div>
+
+    <div class="issue">
+      <h3><span class="tag fix">改 3</span><span>返回动画换成 <b>ease-out 平移</b>，并且固定，不再随机轮换</span></h3>
+      <p class="why">
+        框架喂给动画回调的是<b>线性</b>进度（<code class="k">lv_anim</code> 没设 <code class="k">path_cb</code>），
+        线性平移的观感是"起步发木、落位发硬"。这里在回调里把进度重映射成 ease-out：
+        前半程走完 3/4，起步干脆、收尾软。<b>两个页用同一条曲线</b>，所以始终严丝合缝，不会露黑缝。
+      </p>
+      <div class="chain">
+<span class="dm">// src/gui_apps/utils/custom_trans_anim.c —— 线性进度 → ease-out</span>
+inv = MAX - p;
+return MAX - (inv * inv) / MAX;      <span class="dm">// p=0→0    p=5000→7500    p=10000→10000</span>
+      </div>
+      <p class="why" style="margin-top:11px">
+        方向也固定了：进 app 时页面向左推、返回时向右退，<b>进和出共用同一套配置</b>，
+        所以不会再出现原厂那种"这次旋转、下次缩放"的随机演示动画。
+      </p>
+    </div>
+
+    <div class="issue">
+      <h3><span class="tag fix">改 4</span><span>表盘和蜂窝上<b>关掉</b>这条手势</span></h3>
+      <p class="why">
+        这两页是 app 栈的底：表盘往上没有"上一级"；蜂窝往上虽然能到表盘，但框架走的是
+        <code class="k">app_restart_last_suspend()</code> —— 它会<b>先销毁所有前台 app、
+        <span class="hl">再</span>重启被挂起的那个</b>。
+        在表盘上划一下却弹出主菜单，显然不是想要的效果，所以这两页都关掉。
+      </p>
+      <div class="fixline">
+        关闭时会连检测条的 <code class="k">CLICKABLE</code> 一起清掉 ——
+        否则那条压在最右 16px 的透明检测条会继续吃触摸，蜂窝最右一列的图标就点不动了。
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════ 4. 真机验证 ═══════════════════ -->
+  <div class="card">
+    <h2>真机验证 <span class="sub">串口原始输出 · 我划不了手指，所以用合成滑动注入</span></h2>
+
+    <p class="lede" style="font-size:13.3px">
+      验证办法：串口把计算器拉起来（<code class="k">app_run calculator</code>），
+      再注入一次合成滑动（<code class="k">swipe_sim 385 100</code>，等于从最右划到左边 285px）。
+      下面这段是原始日志，只删了没关系的行。
+    </p>
+
+    <div class="loghead">① 手势判定 → 触发返回</div>
+    <pre class="log">swipe: sim DOWN x=385
+swipe: sim MOVE x=243  dx=142
+swipe: sim UP x=100  dx=285  need=130
+swipe: RELEASE dx=285 need=130 fling=0 -&gt; <span class="g">GO-BACK</span>
+swipe: <span class="g">TRIGGER #1 dx=285 fling=0 -&gt; gui_app_goback()</span></pre>
+
+    <div class="loghead">② 框架接着走它自己那套：切页 → 转场 → 收尾清理</div>
+    <pre class="log">[1501635] D/APP.SCHE  page[calculator][root] tgt_state [RESUMED] -&gt; [STOPED]
+[1501667] D/APP.SCHE  app[calculator] tgt_state [RUNNING] -&gt; [DESTORYED]
+[1501697] D/APP.SCHE  page[clock][root] tgt_state [PAUSED] -&gt; [RESUMED]
+[1505532] I/APP.SCHE  Try setup trans-anim
+[1506626] I/APP.ANI   <span class="b">Start free run animation</span>          <span class="d">← 注意：是 free run，不是 manual</span>
+[1517810] I/APP.ANI   anim_free_run_ready 0
+[1517832] I/APP.ANI   app_trans_anim_free_run_clean       <span class="d">← 转场对象自己清理掉了</span>
+[1517993] I/APP.SCHE  <span class="g">Trans-anim finish, res=0</span>            <span class="d">← 正常收尾（不是 aborted）</span></pre>
+
+    <div class="loghead">③ 关键的一步：返回之后框架还活着（这就是上一版卡死的地方）</div>
+    <pre class="log">[1680042] D/APP.SCHE  app[calculator] tgt_state [LAUNCHED] -&gt; [RUNNING]   <span class="d">← 又启动成功了</span>
+[1680216] D/APP.SCHE  page[calculator][root] tgt_state [CREATED] -&gt; [RESUMED]
+calc: start
+calc: pad   x=15..373 y=180..439  key 67x48 gap 6x5  rows=5 cols=5
+calc: keys=22  screen=390x450</pre>
+
+    <div class="note blue">
+      <b>③ 是这次最重要的一条。</b>上一版卡死时的表现是"蜂窝看得见但没反应"，
+      本质就是 app 层的事件分发停了。这次返回完成之后，我再从串口把计算器拉起来，
+      <b>能正常启动、页面正常创建</b> —— 说明框架是活的，没有残留的转场状态。
+    </div>
+
+    <div class="note green">
+      <b>时间账也对得上：</b>日志前缀的时间戳单位比真实毫秒大 32.768 倍
+      （实测校准：同一段跨度的日志差 942 单位 vs SDK 自己报的 <code class="k">cost=28ms</code>）。
+      换算过来，从 <code class="k">Start free run animation</code> 到收尾是
+      <b>341ms</b>，和框架配的 300ms 播放时长 + 收尾开销吻合；
+      从手势触发到转场收尾总共 <b>约 500ms</b>。
+    </div>
+  </div>
+
+  <!-- ═══════════════════ 5. 改动落在哪 ═══════════════════ -->
+  <div class="card">
+    <h2>改动落在哪 <span class="sub">SDK 一行未动</span></h2>
+    <table>
+      <tr><th style="width:44%">文件</th><th>改了什么</th></tr>
+      <tr>
+        <td><code class="k">src/app_utils/swipe_back.c</code></td>
+        <td>整篇重写：删掉跟手（start/update/stop）、删掉改转场配置的逻辑；
+            改成"识别手势 → gui_app_goback()"，加上右边缘指示条</td>
+      </tr>
+      <tr>
+        <td><code class="k">src/app_utils/swipe_back.h</code></td>
+        <td>补 <code class="k">stdbool.h</code>，写清新的语义和"为什么蜂窝要关掉"</td>
+      </tr>
+      <tr>
+        <td><code class="k">src/gui_apps/utils/custom_trans_anim.c</code></td>
+        <td>平移回调加 ease-out 重映射（<code class="k">push_process_ease</code>）</td>
+      </tr>
+      <tr>
+        <td><code class="k">src/gui_apps/main/app_mainmenu.c</code></td>
+        <td>on_resume 里关掉手势、on_pause 里打开（各一行）</td>
+      </tr>
+      <tr>
+        <td><code class="k">src/gui_apps/clock/app_clock_main.c</code></td>
+        <td>同上（表盘也关掉）</td>
+      </tr>
+      <tr>
+        <td><code class="k">sifli-sdk/…/app_schedule.c</code></td>
+        <td class="ok">已还原成原厂（上一轮我改的那一行撤销了，git 工作区干净）</td>
+      </tr>
+    </table>
+    <div class="note">
+      <b>固件本身没变胖：</b>main.bin 从 2,538,752 B 变成 2,537,916 B —— 少了 836 字节，
+      因为跟手那套状态机代码被删掉了。
+    </div>
+  </div>
+
+  <!-- ═══════════════════ 6. 还没做的 ═══════════════════ -->
+  <div class="card">
+    <h2>还没做的、以及你可以拍板的两件事</h2>
+    <ul>
+      <li>
+        <b>蜂窝上滑动 = 回表盘？</b> 现在蜂窝上是关闭的（理由见"改 4"）。
+        如果你希望"手势像层级一样一层层往上退"，那蜂窝这一层也可以打开 ——
+        它走的是框架的 <code class="k">app_restart_last_suspend()</code>，效果是回到表盘。
+        我没默认打开，因为它会先把前台 app 全部销毁再重启表盘，属于框架的"重"路径，
+        要开的话我会先真机实测一遍再交给你。
+      </li>
+      <li>
+        <b>触发前那约 50ms 的搭台时间。</b> 从松手到画面真正开始动，框架要先截两张整屏快照
+        （日志里 <code class="k">app_trans_animation_setup end, cost=49ms</code>）。
+        这段是 SDK 播放动画的固有开销，我在触发式下没法用"跟手"把它藏掉。
+        你上手试试能不能感觉到；真觉得顿，我再去看能不能复用转场缓冲区。
+      </li>
+      <li>
+        <b>指示条的观感是我的取值：</b>5×56px，白 → 蓝，最多跟着手指挪 18px。
+        觉得太显眼或太不显眼，都能一句话调（或 <code class="k">swipe_ind 0</code> 直接关掉）。
+      </li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  /* ────────────────────────────────────────────────────────────────
+     和固件一一对应的参数（src/app_utils/swipe_back.c）
+     ──────────────────────────────────────────────────────────────── */
+  var HOR        = 390;          /* 屏宽 */
+  var MIN_DX     = 8;            /* 低于它当误碰 */
+  var THRESH     = Math.round(HOR / 3);   /* 130：返回判定线 */
+  var FOLLOW_MAX = 18;           /* 指示条最多跟着手指左移多少 */
+  var ANIM_MS    = 300;          /* 框架的转场播放时长 TRAN_ANIM_PLAY_TIME */
+  var HOLD_MS    = 700;          /* 动画播完在终点停一下再复位（只是给眼睛看） */
+
+  var $ = function(id){ return document.getElementById(id); };
+  var phone = $('phone'), scr = $('scr'), prev = $('scrPrev');
+  var ind = $('ind'), edge = $('edge'), thresh = $('thresh');
+  var verdict = $('verdict'), vMain = $('vMain'), vSub = $('vSub');
+  var nDx = $('nDx'), barFill = $('barFill');
+
+  /* 键盘 5×5 里摆几个键，够看出是计算器就行 */
+  (function buildPad(){
+    var cols = ['7','8','9','÷','C','4','5','6','×','(', '1','2','3','−',')', '0','.','=','+','%'];
+    var pad = $('pad'), h = '';
+    for (var i = 0; i < cols.length; i++){
+      var r = Math.floor(i / 5), c = i % 5;
+      var op = '÷×−+='.indexOf(cols[i]) >= 0 ? ' key op' : ' key';
+      h += '<div class="' + op.trim() + '" style="left:' + (c * 73) + 'px;top:' + (r * 53) +
+           'px;width:67px">' + cols[i] + '</div>';
+    }
+    pad.innerHTML = h;
+  })();
+
+  /* ── 状态 ── */
+  var drag = false, x0 = 0, dx = 0, phase = 'idle', animTimer = null, doneTimer = null;
+  window.__dbg = { phase: 'idle', dx: 0, armed: false, mid: 0 };
+
+  /* 页面位移：p = 已经"走"出去多少像素（0..390）
+     返回动画时：当前页（计算器）向右退出，上一页（蜂窝）从左边进来 */
+  function place(p){
+    var s = 'translateX(' + p + 'px)';
+    scr.style.transform  = s;
+    prev.style.transform = 'translateX(' + (p - HOR) + 'px)';
+  }
+
+  function setVerdict(cls, main, sub){
+    verdict.className = 'verdict' + (cls ? ' ' + cls : '');
+    vMain.innerHTML = main;
+    vSub.innerHTML  = sub;
+  }
+
+  function showReadout(v){
+    nDx.textContent = v;
+    var pct = Math.min(100, v * 100 / HOR);
+    barFill.style.width = pct + '%';
+  }
+
+  function setInd(visible, armed){
+    if (!visible){ ind.className = 'ind'; return; }
+    ind.className = 'ind on' + (armed ? ' armed' : '');
+    var follow = Math.min(dx / 6, FOLLOW_MAX);
+    ind.style.transform = 'translateX(' + (-follow) + 'px)';
+  }
+
+  function reset(){
+    drag = false; dx = 0; phase = 'idle';
+    place(0); showReadout(0); setInd(false, false);
+    thresh.className = 'thresh'; edge.className = 'edge';
+    setVerdict('', '等待滑动', '从右边缘往里划超过 130px 再松手');
+    window.__dbg = { phase: 'idle', dx: 0, armed: false, mid: 0 };
+  }
+
+  /* 松手后播的那段动画 = 固件里框架播的 free-run 转场，ease-out 曲线 */
+  function playBack(){
+    phase = 'anim';
+    thresh.className = 'thresh'; edge.className = 'edge';
+    setVerdict('go', '松手了 → 触发返回', 'gui_app_goback() → 框架播一段 ease-out 平移（300ms）');
+    window.__dbg.phase = 'anim';
+
+    var t0 = performance.now();
+    (function step(){
+      var t = (performance.now() - t0) / ANIM_MS;
+      if (t > 1) t = 1;
+      var e = 1 - (1 - t) * (1 - t);          /* ease-out quad：和固件里的重映射同一条 */
+      place(Math.round(HOR * e));
+      if (t < 1){ animTimer = setTimeout(step, 16); return; }
+      /* 播完停一下，再复位，方便看清终点 */
+      doneTimer = setTimeout(function(){
+        phase = 'hold';
+        window.__dbg.phase = 'hold';
+        doneTimer = setTimeout(reset, HOLD_MS);
+      }, 60);
+    })();
+  }
+
+  function release(){
+    if (!drag) return;
+    drag = false;
+    var go = dx >= THRESH;
+    if (go){ playBack(); return; }
+    /* 不够：什么都不做，页面纹丝不动 */
+    setInd(false, false);
+    showReadout(0);
+    if (dx >= MIN_DX){
+      setVerdict('back', '没划够 → 什么都不做',
+                 '距离 ' + dx + 'px < 130px，画面不动、框架那边也没有转场（这才是上一版卡死的那条路）');
+    } else {
+      setVerdict('', '当误碰处理', '只划了 ' + dx + 'px，连指示条都没出来');
+    }
+    thresh.className = 'thresh'; edge.className = 'edge';
+    phase = 'idle';
+    window.__dbg = { phase: 'idle', dx: dx, armed: false, mid: 0 };
+    dx = 0;
+  }
+
+  function move(cx){
+    if (!drag) return;
+    dx = Math.round(x0 - cx);
+    if (dx < 0) dx = 0;
+    showReadout(dx);
+    var armed = dx >= THRESH;
+    if (dx >= MIN_DX){
+      setInd(true, armed);
+      window.__dbg.mid = dx;
+      window.__dbg.armed = armed;
+    } else {
+      setInd(false, false);
+      window.__dbg.mid = dx;
+      window.__dbg.armed = false;
+    }
+    if (armed){
+      setVerdict('go', '够远了 —— 松手就返回',
+                 '指示条已经变蓝。注意画面本身还是一动没动');
+      edge.className = 'edge hot';
+      thresh.className = 'thresh on';
+    } else {
+      setVerdict('', '继续划…', '再往左 ' + (THRESH - dx) + 'px 就到返回线');
+      edge.className = 'edge hot';
+      thresh.className = 'thresh';
+    }
+  }
+
+  function localX(e){
+    var r = phone.getBoundingClientRect();
+    var cx = (e.touches ? e.touches[0].clientX : e.clientX);
+    return { x: cx - r.left, inEdge: (cx - r.left) >= (r.width - 16) };
+  }
+
+  phone.addEventListener('mousedown', function(e){
+    var p = localX(e);
+    if (!p.inEdge) return;                  /* 只有最右 16px 那条检测带里按下才算 */
+    if (phase === 'anim' || phase === 'hold') return;
+    drag = true; x0 = p.x; dx = 0; phase = 'drag';
+    window.__dbg = { phase: 'drag', dx: 0, armed: false, mid: 0 };
+    setVerdict('', '按住中…', '往左拖，看右边缘那条竖条');
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', function(e){
+    if (!drag) return;
+    move(localX(e).x);
+  });
+  window.addEventListener('mouseup', function(){
+    if (!drag) return;
+    release();
+  });
+  /* 触屏也支持一下 */
+  phone.addEventListener('touchstart', function(e){
+    var p = localX(e);
+    if (!p.inEdge) return;
+    if (phase === 'anim' || phase === 'hold') return;
+    drag = true; x0 = p.x; dx = 0; phase = 'drag';
+    window.__dbg = { phase: 'drag', dx: 0, armed: false, mid: 0 };
+    e.preventDefault();
+  }, {passive:false});
+  phone.addEventListener('touchmove', function(e){
+    if (!drag) return;
+    move(localX(e).x);
+    e.preventDefault();
+  }, {passive:false});
+  phone.addEventListener('touchend', function(){ if (drag) release(); });
+
+  reset();
+})();
+</script>
+
+</body>
+</html>

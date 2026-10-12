@@ -1,0 +1,96 @@
+﻿msh />SFBL
+Serial:c2,Chip:4,Package:3,Rev:3  Reason:00000000
+Serial PowerOnMOde:4 rtc_record:00000000
+mount /dev sucess
+[480] I/drv.rtc main: PSCLR=0x80000100 DivAI=128 DivAF=0 B=256
+[509] I/drv.rtc main: RTC use LXT RTC_CR=00000001
+
+[529] I/drv.rtc main: Init RTC, wake = 1
+
+[555] I/drv.audprc main: init 00 ADC_PATH_CFG0 0x606
+
+[576] I/drv.audprc main: HAL_AUDPRC_Init res 0
+
+[597] I/drv.audcodec main: HAL_AUDCODEC_Init res 0
+
+[618] I/TOUCH main: Regist touch screen driver, probe=0x12026f79 
+lvsf_font_load: faces 1 ft_cache_size 300000
+call par CFG1(3313)
+fc 9, xtal 2000, pll 2153
+call par CFG1(3313)
+fc 7, xtal 2000, pll 1725
+[875] I/NO_TAG app_watc: rtc at boot: 2026-09-20 19:09:57
+[902] I/NO_TAG app_watc: clkdiag: started, 30 samples every 2000ms
+[935] I/NO_TAG app_watc: pm: wakeup ready  KEY1(pin 34) -> AON 10  |  sleep=double-edge, hibernate=high-level
+[980] I/drv.lcd app_watc: [NONE] -> [OPENING]
+[1000] I/drv.lcd lcd_task: open
+[1014] I/drv.epic lcd_task: drv_gpu opened.
+[1031] I/drv.lcd lcd_task: HW open
+[1065] I/drv.lcd lcd_task: Try registered LCD driver...
+msh />
+CO5300_ReadID 0x331100 
+[3367] I/co5300 lcd_task: LCD module use CO5300 IC 
+
+
+CO5300_ReadID 0x331100 
+[9625] I/co5300 lcd_task: LCD module use CO5300 IC 
+
+[9645] I/drv.lcd lcd_task: Found lcd co5300 id:331100h
+[9667] I/drv.lcd lcd_task: HW open done.
+[9683] I/drv.lcd lcd_task: [OPENING] -> [INITIALIZED]
+[9703] I/drv.lcd lcd_task: open done.
+[9722] I/drv.lcd_fb app_watc: drv_lcd_fb_init
+[9742] I/drv.lcd_fb app_watc: drv_lcd_fb_init done.
+[9779] I/TOUCH app_watc: Open
+[9796] I/TOUCH tp_init: Find touch screen driver...
+[9816] I/TOUCH tp_init: Probe 12026f79
+[9833] I/TOUCH tp_init: touch screen found driver  0x2003be38, ft6146
+[9860] I/TOUCH app_watc: Opened.
+[9945] I/LVGL app_watc: [littlevgl2rtt] Welcome to the littlevgl2rtt lib.
+[10034] D/APP.FWK app_watc: send msg[GUI_APP_MSG_RUN_APP] [Main] to gui_app_mbx tick:293.
+[10072] I/APP.FWK.INT app_watc: [Main]
+[11035] I/drv.lcd lcd_task: Auto turn on display.
+[11057] I/drv.lcd lcd_task: set brightness 50
+[11077] I/drv.lcd lcd_task: display on
+[11092] I/drv.lcd lcd_task: [INITIALIZED] -> [ON]
+[11113] I/drv.lcd lcd_task: set brightness 100
+[11131] I/drv.lcd lcd_task: display on
+[11149] D/APP.SCHE app_watc: ----------------app_schedule_task---------------start
+[11180] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_RUN_APP] tick:293
+[11209] I/APP.SCHE app_watc: app[Main] do LOAD, 2004b854
+[11231] I/APP.FWK app_watc: finding Main in builtin apps...
+[11255] D/APP.SCHE app_watc: app[Main] tgt_state [LAUNCHED] -> [RUNNING]
+[11284] I/APP.SCHE app_watc: app[Main] do START, 2004b854
+[11306] I/APP.FWK.INT app_watc: [Main]
+[11323] D/APP.FWK app_watc: send msg[GUI_APP_MSG_OPEN_PAGE] [0x2004b854] to gui_app_mbx tick:333.
+[11361] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_OPEN_PAGE] tick:333
+[11389] D/APP.SCHE app_watc: app[Main] create page[root] 2004b920
+[11414] D/APP.SCHE app_watc: page[Main][root] tgt_state [CREATED] -> [RESUMED]
+[11445] D/APP.SCHE app_watc: Stop all app, and return to main app
+[11483] I/APP.SCHE app_watc: page[Main][root] do ONSTART, 2004b920
+[12638] E/drv.ft6146 tp_init: ft6146 id_H=64
+[12662] E/drv.ft6146 tp_init: ft6146 id_L=56
+[12839] I/APP.SCHE app_watc: page[Main][root] do ONRESUME, 2004b920
+[12867] I/APP.SCHE app_watc: Try setup trans-anim
+[12887] I/APP.SCHE app_watc: Trans-anim is OFF, skip.
+[12908] D/APP.SCHE app_watc: app_schedule_task done.
+clkdiag 01/30  rtc=2026-09-20 19:09:59 (1789931399)  tick=2015  idle=1720
+clkdiag 02/30  rtc=2026-09-20 19:10:01 (1789931401)  tick=4016  idle=3721
+clkdiag 03/30  rtc=2026-09-20 19:10:03 (1789931403)  tick=6016  idle=5721
+clkdiag 04/30  rtc=2026-09-20 19:10:05 (1789931405)  tick=8016  idle=7721
+clkdiag 05/30  rtc=2026-09-20 19:10:07 (1789931407)  tick=10016  idle=9721
+clkdiag 06/30  rtc=2026-09-20 19:10:09 (1789931409)  tick=12016  idle=11721
+clkdiag 07/30  rtc=2026-09-20 19:10:11 (1789931411)  tick=14016  idle=13721
+clkdiag 08/30  rtc=2026-09-20 19:10:13 (1789931413)  tick=16016  idle=15721
+clkdiag 09/30  rtc=2026-09-20 19:10:15 (1789931415)  tick=18016  idle=17721
+clkdiag 10/30  rtc=2026-09-20 19:10:17 (1789931417)  tick=20016  idle=19721
+clkdiag 11/30  rtc=2026-09-20 19:10:19 (1789931419)  tick=22016  idle=21721
+clkdiag 12/30  rtc=2026-09-20 19:10:21 (1789931421)  tick=24016  idle=23721
+clkdiag 13/30  rtc=2026-09-20 19:10:23 (1789931423)  tick=26016  idle=25721
+clkdiag 14/30  rtc=2026-09-20 19:10:25 (1789931425)  tick=28016  idle=27721
+clkdiag 15/30  rtc=2026-09-20 19:10:27 (1789931427)  tick=30016  idle=29721
+clkdiag 16/30  rtc=2026-09-20 19:10:29 (1789931429)  tick=32016  idle=31721
+clkdiag 17/30  rtc=2026-09-20 19:10:31 (1789931431)  tick=34016  idle=33721
+clkdiag 18/30  rtc=2026-09-20 19:10:33 (1789931433)  tick=36016  idle=35721
+clkdiag 19/30  rtc=2026-09-20 19:10:35 (1789931435)  tick=38016  idle=37721
+

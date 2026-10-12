@@ -1,0 +1,90 @@
+﻿msh />msh />SFBL
+Serial:c2,Chip:4,Package:3,Rev:3  Reason:00000000
+Serial PowerOnMOde:4 rtc_record:00000000
+mount /dev sucess
+[479] I/drv.rtc main: PSCLR=0x80000100 DivAI=128 DivAF=0 B=256
+[508] I/drv.rtc main: RTC use LXT RTC_CR=00000001
+
+[528] I/drv.rtc main: Init RTC, wake = 1
+
+[554] I/drv.audprc main: init 00 ADC_PATH_CFG0 0x606
+
+[575] I/drv.audprc main: HAL_AUDPRC_Init res 0
+
+[596] I/drv.audcodec main: HAL_AUDCODEC_Init res 0
+
+[617] I/TOUCH main: Regist touch screen driver, probe=0x12026f79 
+lvsf_font_load: faces 1 ft_cache_size 300000
+call par CFG1(3313)
+fc 9, xtal 2000, pll 2153
+call par CFG1(3313)
+fc 7, xtal 2000, pll 1725
+[873] I/NO_TAG app_watc: rtc at boot: 2024-01-01 12:00:03
+[905] I/NO_TAG app_watc: pm: wakeup ready  KEY1(pin 34) -> AON 10  |  sleep=double-edge, hibernate=high-level
+[950] I/drv.lcd app_watc: [NONE] -> [OPENING]
+[970] I/drv.lcd lcd_task: open
+[983] I/drv.epic lcd_task: drv_gpu opened.
+[1000] I/drv.lcd lcd_task: HW open
+[1035] I/drv.lcd lcd_task: Try registered LCD driver...
+msh />
+CO5300_ReadID 0x331100 
+[3331] I/co5300 lcd_task: LCD module use CO5300 IC 
+
+
+CO5300_ReadID 0x331100 
+[9579] I/co5300 lcd_task: LCD module use CO5300 IC 
+
+[9599] I/drv.lcd lcd_task: Found lcd co5300 id:331100h
+[9620] I/drv.lcd lcd_task: HW open done.
+[9637] I/drv.lcd lcd_task: [OPENING] -> [INITIALIZED]
+[9657] I/drv.lcd lcd_task: open done.
+[9676] I/drv.lcd_fb app_watc: drv_lcd_fb_init
+[9696] I/drv.lcd_fb app_watc: drv_lcd_fb_init done.
+[9734] I/TOUCH app_watc: Open
+[9751] I/TOUCH tp_init: Find touch screen driver...
+[9771] I/TOUCH tp_init: Probe 12026f79
+[9789] I/TOUCH tp_init: touch screen found driver  0x2003be58, ft6146
+[9816] I/TOUCH app_watc: Opened.
+[9901] I/LVGL app_watc: [littlevgl2rtt] Welcome to the littlevgl2rtt lib.
+[9990] D/APP.FWK app_watc: send msg[GUI_APP_MSG_RUN_APP] [Main] to gui_app_mbx tick:292.
+[10028] I/APP.FWK.INT app_watc: [Main]
+[11000] I/drv.lcd lcd_task: Auto turn on display.
+[11023] I/drv.lcd lcd_task: set brightness 50
+[11042] I/drv.lcd lcd_task: display on
+[11058] I/drv.lcd lcd_task: [INITIALIZED] -> [ON]
+[11078] I/drv.lcd lcd_task: set brightness 100
+[11097] I/drv.lcd lcd_task: display on
+[11116] D/APP.SCHE app_watc: ----------------app_schedule_task---------------start
+[11147] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_RUN_APP] tick:292
+[11176] I/APP.SCHE app_watc: app[Main] do LOAD, 2004b828
+[11198] I/APP.FWK app_watc: finding Main in builtin apps...
+[11222] D/APP.SCHE app_watc: app[Main] tgt_state [LAUNCHED] -> [RUNNING]
+[11251] I/APP.SCHE app_watc: app[Main] do START, 2004b828
+[11274] I/APP.FWK.INT app_watc: [Main]
+[11290] D/APP.FWK app_watc: send msg[GUI_APP_MSG_OPEN_PAGE] [0x2004b828] to gui_app_mbx tick:332.
+[11328] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_OPEN_PAGE] tick:332
+[11356] D/APP.SCHE app_watc: app[Main] create page[root] 2004b8f4
+[11382] D/APP.SCHE app_watc: page[Main][root] tgt_state [CREATED] -> [RESUMED]
+[11412] D/APP.SCHE app_watc: Stop all app, and return to main app
+[11451] I/APP.SCHE app_watc: page[Main][root] do ONSTART, 2004b8f4
+[12587] E/drv.ft6146 tp_init: ft6146 id_H=64
+[12611] E/drv.ft6146 tp_init: ft6146 id_L=56
+[12719] I/APP.SCHE app_watc: page[Main][root] do ONRESUME, 2004b8f4
+[12747] I/APP.SCHE app_watc: Try setup trans-anim
+[12767] I/APP.SCHE app_watc: Trans-anim is OFF, skip.
+[12788] D/APP.SCHE app_watc: app_schedule_task done.
+[337904] I/APP.FWK.PM app_watc: fsm:Cur[GUI_STATE_ACTIVE],Action[GUI_PM_ACTION_SLEEP]
+[337940] I/APP.FWK.PM app_watc: change_gui_state:[GUI_STATE_ACTIVE]->[GUI_STATE_INACTIVE_PENDING]
+[337978] I/NO_TAG app_watc: no input:10026
+[337995] I/APP.FWK.PM app_watc: change_gui_state:[GUI_STATE_INACTIVE_PENDING]->[GUI_STATE_INACTIVE]
+[338032] I/APP.FWK.PM app_watc: gui_suspend
+[338051] I/drv.lcd lcd_task: Power off
+[338066] I/drv.epic lcd_task: drv_gpu closed.
+[338084] I/drv.lcd lcd_task: display off
+[338101] I/drv.lcd lcd_task: [ON] -> [OFF]
+[338117] I/drv.lcd lcd_task: HW close
+[338133] I/drv.lcd lcd_task: HW close done.
+[338150] I/drv.lcd lcd_task: Power off done
+[338171] I/TOUCH tp_off: Power off
+[338188] I/TOUCH tp_off: Power off done.
+

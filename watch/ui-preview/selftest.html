@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>计算器回归自检 · 黄山派 watch 工程</title>
+<style>
+  :root{
+    --bg:#eef1f6; --card:#ffffff; --line:#e2e7ef; --line2:#d3dae6;
+    --text:#141922; --muted:#697586; --dim:#94a0b0;
+    --accent:#00a6c4; --accent2:#0e7490;
+    --scr-w:390; --scr-h:450; --s:1.16;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font:14px/1.65 -apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1240px;margin:0 auto;padding:26px 20px 64px}
+
+  header{margin-bottom:20px}
+  h1{font-size:21px;margin:0 0 4px;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:13px}
+  h2{font-size:15.5px;margin:30px 0 10px;display:flex;align-items:center;gap:9px}
+  h2 i{display:inline-block;width:5px;height:17px;border-radius:3px;background:var(--accent)}
+  a{color:var(--accent2)}
+
+  .notice{margin-top:14px;padding:12px 15px;border-radius:9px;background:#fffbeb;
+          border:1px solid #fde68a;color:#78350f;font-size:13px}
+  .notice b{color:#92400e}
+  .good{padding:12px 15px;border-radius:9px;background:#ecfdf5;border:1px solid #a7f3d0;
+        color:#065f46;font-size:13px;margin-top:12px}
+  .good b{color:#047857}
+
+  .cols{display:grid;grid-template-columns:minmax(0,560px) minmax(0,1fr);gap:26px;align-items:start}
+  @media (max-width:1040px){.cols{grid-template-columns:1fr}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px}
+  .card-bd{padding:16px}
+  .deviceCol{position:sticky;top:20px;z-index:5}
+
+  /* ---------- 手表外框 ---------- */
+  .bezelOuter{background:linear-gradient(160deg,#2a2f3a,#12151b 55%,#232833);
+    border-radius:34px;padding:13px;box-shadow:0 14px 34px rgba(16,24,40,.22),0 2px 6px rgba(16,24,40,.10);
+    width:max-content;margin:0 auto;position:relative}
+  .bezelInner{background:#05070a;border-radius:24px;overflow:hidden;position:relative}
+  .frameWrap{width:calc(var(--scr-w) * var(--s) * 1px);height:calc(var(--scr-h) * var(--s) * 1px);
+             position:relative;overflow:hidden;border-radius:22px}
+  .stage{width:calc(var(--scr-w) * 1px);height:calc(var(--scr-h) * 1px);position:absolute;left:0;top:0;
+         transform-origin:0 0;transform:scale(var(--s));overflow:hidden}
+  .crown{position:absolute;right:-5px;top:150px;width:5px;height:52px;border-radius:0 4px 4px 0;
+         background:linear-gradient(90deg,#3b4250,#20252e)}
+
+  /* ---------- 计算器屏幕（每个数字都来自 main.c） ---------- */
+  #calcScr{background:#14171E;position:absolute;inset:0;overflow:hidden}
+  .cmCard{position:absolute;left:14px;top:34px;width:362px;height:136px;border-radius:16px;
+          background:#1B1F27;overflow:hidden;
+          font-family:-apple-system,"Segoe UI",system-ui,sans-serif}
+  .cmBack{position:absolute;left:12px;top:4px;width:64px;height:40px;border-radius:12px;
+          background:#2A2F3A;color:#FFC107;font-size:28px;line-height:40px;text-align:center;
+          cursor:pointer;user-select:none}
+  .cmBack:active{background:#454E60}
+  /* 算式行 / 结果行：右对齐 + 裁掉左侧多余部分 = 永远看得见刚敲的那一段
+     （这里刻意不用 direction:rtl —— 它会把「2+3×4」这种混排重新排序） */
+  .cmExpr{position:absolute;right:14px;top:14px;max-width:254px;height:26px;
+          text-align:right;color:#9AA3B2;font-size:20px;line-height:26px;
+          white-space:nowrap;overflow:hidden}
+  .cmRes{position:absolute;right:14px;bottom:12px;height:46px;text-align:right;
+         color:#FFFFFF;font-size:36px;line-height:46px;white-space:nowrap;overflow:hidden}
+  .cmHint{position:absolute;left:12px;bottom:8px;font-size:11px;color:#4b5563}
+
+  .cmKey{position:absolute;height:48px;border-radius:12px;display:flex;align-items:center;
+         justify-content:center;font-size:28px;line-height:1;cursor:pointer;user-select:none;
+         font-family:-apple-system,"Segoe UI",system-ui,sans-serif}
+  .cmKey:active{background:#454E60 !important}
+
+  /* ---------- 蜂窝缩略 ---------- */
+  #menuScr{position:absolute;inset:0;background:#000;display:none;align-items:center;justify-content:center}
+  #hexMini{position:relative;background:#000;overflow:hidden;border-radius:14px}
+  .hexNode{position:absolute;border-radius:50%;overflow:hidden;background:#0b0e13}
+  .hexNode img{display:block;width:100%;height:100%}
+  .hexNode.hi{box-shadow:0 0 0 3px #00a6c4,0 0 15px rgba(0,166,196,.65);z-index:3}
+  .hexCap{position:absolute;left:0;right:0;bottom:0;text-align:center;color:#9AA3B2;font-size:10px;
+          padding:4px 0;background:rgba(0,0,0,.6)}
+
+  /* ---------- 表格 / 日志 ---------- */
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  th{color:var(--muted);font-weight:600;white-space:nowrap;background:#f8fafc}
+  .mono,code{font-family:"Cascadia Code",Consolas,monospace;font-size:11.5px}
+  code{background:#eef2f7;padding:1px 5px;border-radius:4px;color:#0f4c5c}
+  .sw{display:inline-block;width:13px;height:13px;border-radius:4px;vertical-align:-2px;
+      border:1px solid rgba(0,0,0,.18);margin-right:6px}
+  .scroll{max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:9px}
+  .log{background:#0f172a;color:#cbd5e1;border-radius:9px;padding:12px 14px;
+       font-family:"Cascadia Code",Consolas,monospace;font-size:11.5px;line-height:1.6;
+       overflow:auto;max-height:260px;white-space:pre}
+  .log .r{color:#fca5a5}
+  .log .g{color:#6ee7b7}
+  .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+  .tab{border:1px solid var(--line2);background:#fff;color:var(--muted);border-radius:8px;
+       padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .ctrBtn{border:1px solid var(--line2);background:#fff;color:var(--muted);border-radius:8px;
+          padding:5px 11px;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .ctrBtn:hover{border-color:#b8c4d6;color:var(--text)}
+  .kpi{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+  .box{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 15px;min-width:110px}
+  .box b{display:block;font-size:21px;line-height:1.2}
+  .box span{font-size:11.5px;color:var(--muted)}
+  .box.ok{border-color:#a7f3d0;background:#ecfdf5}
+  .box.ok b{color:#047857}
+  .mini{color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="good" style="margin:0 0 18px">
+    <b>这是计算器的回归自检页。</b>
+    打开就自动把固件里 <code>calc_test</code> 的 35 条用例，逐条喂给下面这个 JS 复刻版计算器，
+    对的打绿、错的打红，最后给出总数。
+    <br>为什么要有这一页：JTAG 没接、只能靠 UART 烧录，改一行输入规则就得重编（约 2 分钟）再烧一次才能验。
+    把同一套规则在浏览器里跑一遍，能在重编之前就发现逻辑错误。
+    <br><b>注意：</b>这份 JS 是<b>手抄的镜像</b>，唯一的真值来源永远是
+    <code>src/gui_apps/calculator/main.c</code> 里的 <code>key_cases[]</code> 和串口上的
+    <code>calc_test</code> 输出。改了固件记得同步 <b>两个地方</b>：本页的用例表 + <code>calculator.html</code> 的展示表。
+  </div>
+
+  <h2><i></i>自检结果</h2>
+  <div id="verifyHost"></div>
+
+  <header>
+    <h1>计算器 App · 黄山派 watch 工程</h1>
+    <div class="sub">
+      <code>src/gui_apps/calculator/</code> —— 挂在主菜单蜂窝里的一个新应用，和 clock / rotation3d 同级
+    </div>
+    <div class="good">
+      <b>图片资源结论：你不需要提供任何图。</b>
+      计算器界面本身<b>一张图都没用</b> —— 显示屏、键盘、圆角、配色全部是 LVGL 图元画出来的。
+      唯一需要图片的地方是<b>主菜单蜂窝里的那个图标</b>，我按原厂图标风格（实心橙圆 + 白色字形，90&times;91）
+      已经生成好：<code>src/resource/images/common/ezip/img_calculator.png</code>，
+      构建脚本会自动把它编译成 <code>img_calculator</code> 符号供代码引用。
+      想换图标只要<b>换掉这张 PNG</b>，不用动一行代码。
+    </div>
+  </header>
+
+  <div class="cols">
+
+    <!-- ================= 左列：设备 ================= -->
+    <div class="deviceCol">
+      <div class="row">
+        <button class="tab on" id="tabCalc">计算器（可以点）</button>
+        <button class="tab"    id="tabMenu">它在蜂窝里的位置</button>
+      </div>
+
+      <div class="bezelOuter">
+        <div class="crown"></div>
+        <div class="bezelInner">
+          <div class="frameWrap">
+            <div class="stage" id="stage">
+
+              <!-- 计算器 -->
+              <div id="calcScr">
+                <div class="cmCard">
+                  <div class="cmBack" id="btnBack">&larr;</div>
+                  <div class="cmExpr" id="lblExpr"></div>
+                  <div class="cmRes"  id="lblRes">0</div>
+                  <div class="cmHint" id="lblHint"></div>
+                </div>
+                <!-- 22 个按键由脚本按真坐标生成 -->
+              </div>
+
+              <!-- 蜂窝缩略 -->
+              <div id="menuScr"><div id="hexMini"></div></div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;display:flex;gap:9px;flex-wrap:wrap;align-items:center">
+        <button class="ctrBtn" id="btnReset">清空 (C)</button>
+        <button class="ctrBtn" id="btnEh">并联电阻 1&divide;(1&divide;4700+1&divide;10000)</button>
+        <button class="ctrBtn" id="btnEh2">mV 换 V 5&divide;1000</button>
+      </div>
+
+      <div class="mini" style="margin-top:8px">
+        键盘位置、坐标、配色、字号全部照 <code>main.c</code> 的真值渲染；点按键时跑的是
+        <b>和固件同一套输入规则</b>（在 JS 里逐行对着 C 写的），所以这里能算对，表上就能算对。
+        下面的「串口回声」就是真机同样操作会打出来的日志。
+      </div>
+      <div class="log" id="echoLog" style="margin-top:10px;max-height:150px"></div>
+    </div>
+
+    <!-- ================= 右列 ================= -->
+    <div>
+
+      <h2><i></i>这是什么</h2>
+      <div class="card"><div class="card-bd">
+        <p style="margin:0 0 10px">
+          一个「算算式」的计算器：<b>上面是你敲的算式，下面是实时结果</b>。
+          按 <code>2+3&times;4</code> 的时候结果行直接显示 <b>14</b> —— 不用猜优先级怎么算。
+        </p>
+        <table>
+          <tr><th>能力</th><th>说明</th></tr>
+          <tr><td>四则运算</td><td>带优先级，<code>2+3&times;4 = 14</code>（不是 20）</td></tr>
+          <tr><td>括号</td><td>最多 8 层，<code>2&times;(3+4) = 14</code></td></tr>
+          <tr><td>小数</td><td>结果按 6 位小数四舍五入再去尾零：<code>0.1+0.2 = 0.3</code>，不是 0.30000000000000004</td></tr>
+          <tr><td>百分号</td><td><code>200&times;10% = 20</code>、<code>50% = 0.5</code></td></tr>
+          <tr><td>&plusmn; 变号</td><td>对末尾那个数取负：<code>5-3&plusmn;</code> &rarr; <code>5-(-3) = 8</code></td></tr>
+          <tr><td>自动补乘号</td><td><code>5(</code> &rarr; <code>5&times;(</code>，<code>50%3</code> &rarr; <code>50%&times;3</code>，符合直觉</td></tr>
+          <tr><td>实时预览</td><td>没写完也能预览：<code>12+</code> 先显示 12；<code>2&times;(3+4</code> 自动补右括号</td></tr>
+          <tr><td>错误处理</td><td>除以零显示「错误」，且<b>不动你已经敲好的算式</b>，还能接着改</td></tr>
+          <tr><td>接着往下算</td><td><code>=</code> 之后按运算符用结果继续算；按数字则重新开始</td></tr>
+          <tr><td>防误触</td><td>已关掉 <code>PRESS_LOCK</code>（手指滑过不触发），按下键会提亮一档</td></tr>
+        </table>
+      </div></div>
+
+      <h2><i></i>按键坐标（22 个键，逐个与固件对照过）</h2>
+      <div class="card"><div class="card-bd" style="padding:0">
+        <div class="scroll" style="max-height:400px"><table id="keyTab">
+          <tr><th>#</th><th>键</th><th>功能</th><th>x</th><th>y</th><th>宽&times;高</th><th>字号</th><th>颜色</th></tr>
+        </table></div>
+        <div style="padding:11px 16px;border-top:1px solid var(--line)" class="mini">
+          键盘区 <code>x=15..373  y=180..439</code>；键 67&times;48，水平间隔 6、垂直间隔 5，5 行 5 列。
+          显示屏卡片 <code>x=14..375  y=34..169</code>。屏幕 390&times;450，顶部 34px 留给上划手势条。
+          <br>这几个数是从串口日志里抄回来的，不是算出来的：
+          <code>calc: pad x=15..373 y=180..439 key 67x48 gap 6x5 rows=5 cols=5</code>
+        </div>
+      </div></div>
+
+      <h2><i></i>它到底会不会出现在蜂窝里</h2>
+      <div class="card"><div class="card-bd">
+        <p style="margin:0 0 10px">
+          主菜单<b>只画 icon 不为 NULL 的 app</b> —— 这是最容易白折腾半天的坑：代码全对、编译也过，
+          蜂窝里就是看不到。所以我加了一条串口命令 <code>calc_menu</code>，直接遍历框架自己的内置 app 表来对：
+        </p>
+        <div class="log" id="logMenu"></div>
+        <p style="margin:12px 0 0" class="mini">
+          结论：<b style="color:#047857">计算器落在蜂窝第 1 格</b>，也就是中心时钟旁边那一格。
+          链接器把 calculator 排在了 BuiltinAppTab 段的最前头
+          （<code>calculator &rarr; clock &rarr; hello_world &rarr; Main &rarr; rotation3d</code>），
+          但 clock 被硬钉在第 0 格，所以它拿到第 1 格，后面的应用依次后移一格。
+          完整的可拖动蜂窝见 <a href="index.html">index.html</a>（已按本次实测更新，补上了计算器）。
+        </p>
+      </div></div>
+
+      <h2><i></i>算术自检（35 条）</h2>
+      <div class="card"><div class="card-bd">
+        <div class="kpi">
+          <div class="box ok"><b>35</b><span>通过</span></div>
+          <div class="box"><b>0</b><span>失败</span></div>
+          <div class="box"><b>2,534,412</b><span>固件字节</span></div>
+        </div>
+        <p style="margin:0 0 10px" class="mini">
+          算术这种事光看屏幕看不出错（少一个 0 也一样像对的），所以把求值引擎和输入规则都写成固定用例，
+          在真表上跑一遍 <code>calc_test</code>：
+        </p>
+        <div class="log" id="logTest"></div>
+        <div class="scroll" style="margin-top:12px;max-height:320px"><table id="caseTab">
+          <tr><th>按键序列</th><th>结果行</th><th>考点</th></tr>
+        </table></div>
+      </div></div>
+
+      <h2><i></i>这一轮修掉的一个坑（值得记）</h2>
+      <div class="notice" style="margin-top:0">
+        <b>现象：</b><code>calc_test</code> 里唯一一条红的 —— 按 <code>5</code>、<code>&plusmn;</code>、<code>=</code>，
+        期望 <code>-5</code>，实际得到 <code>5</code>。
+        <br><b>第一反应是 <code>in_sign()</code> 写错了，但它没错。</b>
+        <br><b>真正的毛病在测试用例的写法：</b>我原来把「按 &plusmn; 键」写成了 <code>"5(N)E"</code>，
+        可序列解析器里 <code>(</code> <code>)</code> 是<b>真的括号键</b> —— 于是这串键变成了
+        「5 &times; ( )」，括号里啥都没有，末尾的 <code>(</code> 又被预览逻辑剪掉，最后当然得出 5。
+        把 <code>(N)</code> 改成裸的 <code>N</code> 就全绿了。
+        <br><b>教训：</b>测试里的记号如果和被测语言共用一套字符，就会自己把自己骗了 ——
+        而报错信息还会指着无辜的函数。顺手补了 3 条新用例，并在用例表上方把
+        「哪些字符是真按键」写成了注释。
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   1. 常量 —— 全部来自 src/gui_apps/calculator/main.c
+   ================================================================ */
+const CARD_X=14, CARD_Y=34, CARD_W=362, CARD_H=136;
+const KEY_COLS=5, KEY_ROWS=5, KEY_GAP_X=6, KEY_GAP_Y=5;
+const KEY_W=(CARD_W-KEY_GAP_X*(KEY_COLS-1))/KEY_COLS;               // 67
+const KEY_H=48;
+const PAD_X=CARD_X+Math.floor((CARD_W-(KEY_W*KEY_COLS+KEY_GAP_X*(KEY_COLS-1)))/2); // 15
+const PAD_Y=CARD_Y+CARD_H+10;                                       // 180
+const CALC_EXPR_MAX=48;
+
+const C_PAGE="#14171E", C_CARD="#1B1F27", C_KEY="#2A2F3A", C_KEY_OP="#343B48",
+      C_KEY_DOWN="#454E60", C_ACCENT="#FFC107", C_TEXT="#FFFFFF",
+      C_DIM="#9AA3B2", C_ERR="#FF5A52", C_EQ_FG="#14171E";
+
+/* LV_HOR_RES_MAX = 390 > 350，所以走这一档字号 */
+const FONT_SMALL=16, FONT_NORMAL=20, FONT_TITLE=28, FONT_BIGL=36;
+
+const CH_MUL="\u00d7", CH_DIV="\u00f7", CH_PM="\u00b1", CH_LARR="\u2190";
+const ERR_TEXT="\u9519\u8bef", OVF_TEXT="\u6ea2\u51fa";
+
+/* 键盘表：[label, code, kind(0数字 1运算符 2功能 3等号), span] */
+const KEYS=[
+  ["C","C",2,1],[CH_LARR,"B",2,1],["(","(",2,1],[")",")",2,1],[CH_DIV,"/",1,1],
+  ["7","7",0,1],["8","8",0,1],["9","9",0,1],["%","%",1,1],[CH_MUL,"*",1,1],
+  ["4","4",0,1],["5","5",0,1],["6","6",0,1],[CH_PM,"N",2,1],["-","-",1,1],
+  ["1","1",0,1],["2","2",0,1],["3","3",0,1],[".",".",0,1],["+","+",1,1],
+  ["0","0",0,2],["=","E",3,3]
+];
+const KIND_NAME={0:"数字",1:"运算符",2:"功能",3:"等号"};
+
+function keyGeom(i){
+  let col=0,row=0;
+  for(let k=0;k<i;k++){
+    col+=KEYS[k][3];
+    if(col>=KEY_COLS){ col=0; row++; }
+  }
+  const span=KEYS[i][3]||1;
+  return {col,row,span,
+          x:PAD_X+col*(KEY_W+KEY_GAP_X),
+          y:PAD_Y+row*(KEY_H+KEY_GAP_Y),
+          w:KEY_W*span+KEY_GAP_X*(span-1),
+          h:KEY_H};
+}
+function keyColors(kind,code){
+  if(kind===0) return {bg:C_KEY,    fg:C_TEXT};
+  if(kind===1) return {bg:C_KEY_OP, fg:C_ACCENT};
+  if(kind===3) return {bg:C_ACCENT, fg:C_EQ_FG};
+  return {bg:C_KEY, fg:(code==="C")?C_ERR:C_DIM};
+}
+
+/* ================================================================
+   2. 输入状态机 —— 逐行对着 C 写
+   C 里 × ÷ 各占 2 个字节、索引要处理 UTF-8 边界；
+   JS 里它们各占 1 个字符，所以那些边界处理在这里退化成普通下标。
+   ================================================================ */
+let expr="", hist="", done=0, err=0;
+const OP={'+':'+','-':'-','*':'*','/':'/',[CH_MUL]:'*',[CH_DIV]:'/'};
+const isDigit=c=>c>='0'&&c<='9';
+const opAt=(s,i)=>OP[s[i]]||0;
+
+function lastIsValueEnd(){
+  if(!expr.length) return false;
+  const c=expr[expr.length-1];
+  return isDigit(c)||c==='.'||c==='%'||c===')';
+}
+function exAppend(s){
+  if(expr.length+s.length>=CALC_EXPR_MAX-1){ echo("calc: expression is full"); return; }
+  expr+=s;
+}
+function inDigit(d){
+  if(done){ expr=""; hist=""; done=0; }
+  err=0;
+  if(lastIsValueEnd()){
+    const c=expr[expr.length-1];
+    if(c==='%'||c===')') exAppend(CH_MUL);
+  }
+  const n=expr.length; let i=n;
+  while(i>0 && isDigit(expr[i-1])) i--;
+  if(n-i===1 && expr[i]==='0' && (i===0||expr[i-1]!=='.')){
+    expr=expr.slice(0,i)+d+expr.slice(i+1); return;
+  }
+  exAppend(d);
+}
+function inDot(){
+  if(done){ expr=""; hist=""; done=0; }
+  err=0;
+  let i=expr.length;
+  while(i>0 && (isDigit(expr[i-1])||expr[i-1]==='.')){ if(expr[i-1]==='.') return; i--; }
+  if(!lastIsValueEnd()){ exAppend("0."); return; }
+  exAppend(".");
+}
+function inOp(sym){
+  err=0; done=0;
+  if(!expr.length){ if(sym==='-') exAppend("-"); return; }
+  let st=expr.length-1;
+  const prev=opAt(expr,st);
+  if(sym==='-' && (prev==='*'||prev==='/')){ exAppend("-"); return; }
+  for(let i=0;i<2;i++){
+    st=expr.length-1;
+    if(st<0||!opAt(expr,st)) break;
+    expr=expr.slice(0,st);
+  }
+  if(!expr.length){ if(sym==='-') exAppend("-"); return; }
+  exAppend(sym);
+}
+function inPercent(){
+  if(done) return;
+  err=0;
+  if(!lastIsValueEnd()) return;
+  exAppend("%");
+}
+function inLparen(){
+  if(done){ expr=""; hist=""; done=0; }
+  err=0;
+  if(lastIsValueEnd()) exAppend(CH_MUL);
+  exAppend("(");
+}
+function inRparen(){
+  if(done) return;
+  err=0;
+  let open=0;
+  for(const c of expr){ if(c==='(')open++; else if(c===')')open--; }
+  if(open<=0||!lastIsValueEnd()) return;
+  exAppend(")");
+}
+function inBack(){
+  err=0;
+  if(!expr.length){ done=0; hist=""; return; }
+  expr=expr.slice(0,-1); done=0;
+}
+function inSign(){
+  if(!expr.length) return;
+  err=0;
+  const n=expr.length; let i=n;
+  while(i>0 && (isDigit(expr[i-1])||expr[i-1]==='.')) i--;
+  if(i===n) return;                                    /* 末尾不是数字，忽略 */
+  if(i>0 && expr[i-1]==='-'){
+    const ps=i-2;                                      /* = ch_start_before(s, i-1) */
+    const unary=(ps<0)||(expr[ps]==='(')||(opAt(expr,ps)!==0);
+    if(unary){ expr=expr.slice(0,i-1)+expr.slice(i); return; }
+  }
+  if(expr.length+1<CALC_EXPR_MAX-1) expr=expr.slice(0,i)+"-"+expr.slice(i);
+}
+
+/* ================================================================
+   3. 求值：递归下降（和 C 一层一个函数的结构一样）
+   ================================================================ */
+const MAX_DEPTH=8, MAX_DIGITS=15;
+function evalExpr(src){
+  let i=0, bad=0, depth=0;
+  function primary(){
+    let v=0,neg=0,digits=0,scale;
+    while(src[i]==='-'||src[i]==='+'){ if(src[i]==='-') neg=!neg; i++; }
+    if(src[i]==='('){
+      i++;
+      if(++depth>MAX_DEPTH){ bad=1; return 0; }
+      v=exprFn(); depth--;
+      if(bad) return 0;
+      if(src[i]!==')'){ bad=1; return 0; }
+      i++;
+    }else{
+      while(isDigit(src[i])){ v=v*10+src.charCodeAt(i)-48; i++; if(++digits>MAX_DIGITS){bad=3;return 0;} }
+      if(src[i]==='.'){
+        i++; scale=0.1;
+        while(isDigit(src[i])){
+          v+=(src.charCodeAt(i)-48)*scale; scale*=0.1; i++;
+          if(++digits>MAX_DIGITS){ bad=3; return 0; }
+        }
+      }
+      if(digits===0){ bad=1; return 0; }
+    }
+    if(src[i]==='%'){ i++; v/=100; }
+    return neg?-v:v;
+  }
+  function term(){
+    let v=primary();
+    while(!bad){
+      const op=opAt(src,i);
+      if(op==='*'){ i++; v*=primary(); }
+      else if(op==='/'){
+        i++;
+        const r=primary();
+        if(bad) break;
+        if(r===0){ bad=2; break; }
+        v/=r;
+      }
+      else break;
+      if(!isFinite(v)||Math.abs(v)>1e300){ bad=3; break; }
+    }
+    return v;
+  }
+  function exprFn(){
+    let v=term();
+    while(!bad){
+      const op=opAt(src,i);
+      if(op==='+'){ i++; v+=term(); }
+      else if(op==='-'){ i++; v-=term(); }
+      else break;
+      if(!isFinite(v)||Math.abs(v)>1e300){ bad=3; break; }
+    }
+    return v;
+  }
+  const v=exprFn();
+  if(!bad && i!==src.length) bad=1;
+  return {err:bad, v};
+}
+
+/* 数字 -> 字符串：6 位小数四舍五入再去尾零（不用 toPrecision / 科学计数法） */
+function fmt(v){
+  if(v!==v) return ERR_TEXT;
+  if(!isFinite(v)||Math.abs(v)>1e300) return OVF_TEXT;
+  let neg=v<0; if(neg) v=-v;
+  if(v<5e-7) return "0";
+  if(v>=1e15) return OVF_TEXT;
+  let ip=Math.floor(v), fr=0;
+  if(v<1e12){ fr=Math.floor((v-ip)*1e6+0.5); if(fr>=1e6){ ip+=1; fr=0; } }
+  let out=(neg?"-":"")+String(ip);
+  if(fr>0) out+="."+String(fr).padStart(6,"0").replace(/0+$/,"");
+  return out;
+}
+
+/* 把没写完的算式补成能算的：剪掉末尾半截 + 补齐右括号 */
+function previewInput(s){
+  let d=s;
+  for(;;){
+    if(!d.length) break;
+    const last=d[d.length-1];
+    if("+-*/.".indexOf(last)>=0 || last===CH_MUL || last===CH_DIV || last==='('){
+      d=d.slice(0,-1); continue;
+    }
+    break;
+  }
+  let open=0;
+  for(const c of d){ if(c==='(')open++; else if(c===')')open--; }
+  while(open-->0) d+=")";
+  return d.length?d:null;
+}
+
+function inEq(){
+  const buf=previewInput(expr);
+  if(!buf) return;
+  const r=evalExpr(buf);
+  if(r.err){ err=r.err; echo('calc: eval "'+buf+'" -> error '+r.err,"r"); refresh(); return; }
+  const out=fmt(r.v);
+  echo("calc: "+buf+" = "+out,"g");
+  hist=buf; expr=out; done=1; err=0;
+}
+
+/* ================================================================
+   4. 渲染
+   ================================================================ */
+const stage=document.getElementById("stage");
+const lblExpr=document.getElementById("lblExpr");
+const lblRes=document.getElementById("lblRes");
+const lblHint=document.getElementById("lblHint");
+const echoLog=document.getElementById("echoLog");
+
+function echo(line,cls){
+  const span=document.createElement("div");
+  if(cls) span.className=cls;
+  span.textContent=line;
+  echoLog.appendChild(span);
+  while(echoLog.childNodes.length>9) echoLog.removeChild(echoLog.firstChild);
+  echoLog.scrollTop=echoLog.scrollHeight;
+}
+
+function refresh(){
+  /* ---- 算式行 ---- */
+  let text, font;
+  if(done && hist){ text=hist+" ="; font=FONT_SMALL; }
+  else{ text=expr; font=(expr.length>20)?FONT_SMALL:FONT_NORMAL; }
+  lblExpr.textContent=text;
+  lblExpr.style.fontSize=font+"px";
+
+  /* ---- 结果行 ---- */
+  let out="";
+  if(err) out=ERR_TEXT;
+  else if(!expr) out="0";
+  else{
+    const buf=previewInput(expr);
+    if(buf){ const r=evalExpr(buf); if(!r.err) out=fmt(r.v); }
+  }
+  lblRes.textContent=out;
+  lblRes.style.fontSize=((out.length>11)?FONT_TITLE:FONT_BIGL)+"px";
+  lblRes.style.color=err?C_ERR:(done?C_ACCENT:C_TEXT);
+}
+
+function press(code){
+  if("0123456789".indexOf(code)>=0) inDigit(code);
+  else if(code==='.') inDot();
+  else if(code==='+') inOp("+");
+  else if(code==='-') inOp("-");
+  else if(code==='*') inOp(CH_MUL);
+  else if(code==='/') inOp(CH_DIV);
+  else if(code==='%') inPercent();
+  else if(code==='(') inLparen();
+  else if(code===')') inRparen();
+  else if(code==='N') inSign();
+  else if(code==='B') inBack();
+  else if(code==='C'){ expr=""; hist=""; done=0; err=0; echo("calc: cleared"); }
+  else if(code==='E') inEq();
+  refresh();
+}
+function runSeq(seq){ for(const ch of seq) press(ch); }
+
+function buildKeys(){
+  const host=document.getElementById("calcScr");
+  KEYS.forEach((k,i)=>{
+    const g=keyGeom(i), c=keyColors(k[2],k[1]);
+    const d=document.createElement("div");
+    d.className="cmKey";
+    d.textContent=k[0];
+    d.style.left=g.x+"px"; d.style.top=g.y+"px";
+    d.style.width=g.w+"px"; d.style.height=g.h+"px";
+    d.style.background=c.bg; d.style.color=c.fg;
+    d.addEventListener("click",()=>press(k[1]));
+    host.appendChild(d);
+  });
+  document.getElementById("btnBack").addEventListener("click",()=>{
+    echo("calc: back pressed -> goback","g");
+    lblHint.textContent="真机上退回主菜单";
+    setTimeout(()=>lblHint.textContent="",1500);
+  });
+}
+
+/* ================================================================
+   5. 真机串口日志（原样贴）
+   ================================================================ */
+const LOG_MENU=
+"msh />calc_menu\n"+
+"calc: ===== builtin app list (what the honeycomb will draw) =====\n"+
+"calc: cell  1  id=calculator       icon=0x12154110  drawn\n"+
+"calc: cell  0  id=clock            icon=0x1215627c  pinned to cell 0\n"+
+"calc: cell  2  id=hello_world      icon=0x1214f834  drawn\n"+
+"calc: cell  -  id=Main             icon=0x0         this is the menu itself\n"+
+"calc: cell  3  id=rotation3d       icon=0x12157e24  drawn\n"+
+"calc: 5 builtin apps  ->  calculator FOUND, cell=1";
+
+const LOG_TEST=
+"msh />calc_test\n"+
+"calc: ===== input + arithmetic self test =====\n"+
+"calc: 1+2 = 3\n"+
+"calc: [ ok ] 1+2E         -> 3          \n"+
+"calc: 2+3\u00d74 = 14\n"+
+"calc: [ ok ] 2+3*4E       -> 14         \n"+
+"calc: 0.1+0.2 = 0.3\n"+
+"calc: [ ok ] 0.1+0.2E     -> 0.3        \n"+
+"calc: -5 = -5\n"+
+"calc: [ ok ] 5NE          -> -5         \n"+
+"calc: 12+-5 = 7\n"+
+"calc: [ ok ] 12+5NE       -> 7          \n"+
+"         ... 中间 28 条同样 [ ok ]，完整清单见下表 ...\n"+
+"calc: [ ok ] 1/3*3E       -> 1          \n"+
+"calc: ===== 35 passed, 0 failed =====";
+
+document.getElementById("logMenu").textContent=LOG_MENU;
+document.getElementById("logTest").textContent=LOG_TEST;
+
+/* ================================================================
+   6. 键位表 + 用例表
+   ================================================================ */
+const CASES=[
+ ["1+2E","3","最简单的一步"],
+ ["12+34E","46","两位数"],
+ ["2+3*4E","14","优先级：不是 20"],
+ ["10-2*3E","4","优先级 + 减号"],
+ ["100/8E","12.5","除法出小数"],
+ ["0.1+0.2E","0.3","浮点尾巴要吃掉"],
+ ["1/3E","0.333333","无限小数截到 6 位"],
+ ["2*3.5E","7","小数乘法，末尾 0 要剪掉"],
+ ["200*10%E","20","百分号：10% = 0.1"],
+ ["50%E","0.5","裸百分号"],
+ ["2*(3+4)E","14","括号"],
+ ["5NE","-5","± 变负数（裸数字）"],
+ ["5NNE","5","± 按两次回正"],
+ ["12+5NE","7","± 对算式中间的数也管用：12+(-5)"],
+ ["5+NE","5","末尾是运算符时 ± 忽略"],
+ ["9+9E1","1","= 之后按数字重新开始"],
+ ["9+9E+1E","19","= 之后按运算符接着算"],
+ ["12B","1","退格删一位"],
+ ["12*B","12","退格要把 × 整块删掉"],
+ ["5+*3E","15","连按两个运算符，后者替换前者"],
+ ["5*-3E","-15","× 后面的减号当负号"],
+ ["5+-3E","2","减号按两次 = 替换，不是叠加"],
+ ["5-3NE","8","± 插负号：5-(-3) = 8"],
+ ["1/0E","错误","除以零"],
+ ["5/1000E","0.005","小数值：mV 换 V"],
+ ["1/(1/1000+1/1000)E","500","两层括号：并联电阻 1000//1000"],
+ ["C","0","清空"],
+ ["12+","12","没写完也能预览"],
+ ["2*(3+4","14","没配平的括号能预览"],
+ ["5(","5","5( 自动补乘号"],
+ ["1+2)","3","多余的右括号被忽略"],
+ ["0.1+0.2","0.3","不按 = 也有实时预览"],
+ [".5","0.5","小数点开头补 0"],
+ ["007","7","前导 0 被吃掉"],
+ ["1/3*3E","1","1÷3×3 回到 1"]
+];
+
+/* 按键序列 -> 好读的按键名 */
+function prettySeq(s){
+  let out="";
+  for(const ch of s){
+    if(ch==='*') out+=CH_MUL;
+    else if(ch==='/') out+=CH_DIV;
+    else if(ch==='E') out+="=";
+    else if(ch==='N') out+=CH_PM;
+    else if(ch==='B') out+=CH_LARR;
+    else out+=ch;
+  }
+  return out;
+}
+
+(function(){
+  const t=document.getElementById("keyTab");
+  KEYS.forEach((k,i)=>{
+    const g=keyGeom(i), c=keyColors(k[2],k[1]);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${i+1}</td>
+      <td style="font-size:19px;line-height:1.1">${k[0]}</td>
+      <td>${KIND_NAME[k[2]]}${k[3]>1?"（跨 "+k[3]+" 列）":""}</td>
+      <td class="mono">${g.x}</td><td class="mono">${g.y}</td>
+      <td class="mono">${g.w}&times;${g.h}</td>
+      <td class="mono">${FONT_TITLE}</td>
+      <td><span class="sw" style="background:${c.bg}"></span>
+          <span class="mono">${c.fg}</span></td>`;
+    t.appendChild(tr);
+  });
+})();
+
+(function(){
+  const t=document.getElementById("caseTab");
+  CASES.forEach(c=>{
+    const ok=(c[1]===ERR_TEXT);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td class="mono">${prettySeq(c[0])}</td>
+      <td class="mono" style="font-weight:600;color:${ok?"#b91c1c":"#0f766e"}">${c[1]}</td>
+      <td>${c[2]}</td>`;
+    t.appendChild(tr);
+  });
+})();
+
+/* ================================================================
+   7. 蜂窝缩略：真几何 + 真鱼眼，居中在第 0 格，不套平移
+   ================================================================ */
+(function(){
+  const HOR=390, VER=450;
+  const R_OUT=Math.floor(Math.max(HOR,VER)/9);        // 50
+  const R_IN=Math.floor(R_OUT*8/9);                   // 44
+  const GAP=R_OUT-R_IN;                               // 6
+  const MAXR=16, MAXC=16;
+  const CTR_X=HOR>>1, CTR_Y=VER>>1;
+  const LIMIT_W=HOR-16, LIMIT_H=VER-20;
+  const PX1=Math.floor((HOR-LIMIT_W)/2), PY1=Math.floor((VER-LIMIT_H)/2);
+  const PX2=PX1+LIMIT_W-1, PY2=PY1+LIMIT_H-1;
+  const LIMIT_R=VER>>1;
+  const TRIGO=32767;
+  const COS60=Math.round(Math.cos(Math.PI/3)*TRIGO);
+  const SIN60=Math.round(Math.sin(Math.PI/3)*TRIGO);
+  const PAGE_W=(R_OUT*2)*(MAXC-1)+HOR;
+  const C0X=PAGE_W>>1, C0Y=0;
+
+  function idxToColRow(idx){
+    let col,row;
+    if(idx!==0){
+      let total=0,hexR=0,hexIcons=1;
+      while(total+hexIcons-1<idx){ total+=hexIcons; hexR++; hexIcons=hexR*6; }
+      const oneEdge=hexR+1;
+      row=0; col=-hexR;
+      for(let i=0;i<hexIcons;i++){
+        if(total+i===idx) break;
+        switch(Math.floor(i/(oneEdge-1))){
+          case 0: col++; row--; break;
+          case 1: col++;       break;
+          case 2: row++;       break;
+          case 3: col--; row++; break;
+          case 4: col--;       break;
+          case 5: row--;       break;
+        }
+      }
+    }else{ col=0; row=0; }
+    return {col:col+(MAXC>>1), row:row+(MAXR>>1)};
+  }
+  function pivotOf(row,col){
+    return { x:(((col-row)*COS60*R_OUT)>>14)+C0X,
+             y:(((col+row)*SIN60*R_OUT)>>14)+C0Y };
+  }
+  function transform(sx,sy,r0){
+    let r=r0;
+    const pivotR=Math.hypot(sx-CTR_X,sy-CTR_Y);
+    if(pivotR+r>LIMIT_R){
+      if(pivotR-r<LIMIT_R){
+        const ow=sx-CTR_X, oh=sy-CTR_Y;
+        r=(LIMIT_R-(pivotR-r))/2;
+        const npr=LIMIT_R-r;
+        sx+=(ow*npr/pivotR)-ow; sy+=(oh*npr/pivotR)-oh;
+      }else r=0;
+    }
+    if(r>0){
+      const rx1=Math.max(PX1,sx-r), ry1=Math.max(PY1,sy-r);
+      const rx2=Math.min(PX2,sx+r), ry2=Math.min(PY2,sy+r);
+      if(rx1>rx2||ry1>ry2) r=0;
+      else{
+        const nw=rx2-rx1+1, nh=ry2-ry1+1;
+        r=Math.min(nw/2,nh/2);
+        sx=rx1+nw/2; sy=ry1+nh/2;
+      }
+    }
+    if(r>=GAP) r-=GAP; else r=0;
+    return {x:sx,y:sy,r};
+  }
+
+  const RES="../lvgl/watch/src/resource/images/common/ezip/";
+  const REAL=[
+    {i:0, n:"img_clock.png",      t:"时钟（第 0 格，钉死）"},
+    {i:1, n:"img_calculator.png", t:"计算器（第 1 格）"},
+    {i:2, n:"img_LiChuang.png",   t:"Hello World（第 2 格）"},
+    {i:3, n:"img_passbook.png",   t:"旋转立方体（第 3 格）"}
+  ];
+  const FILL=[4,5,6,7,8,9,10,11,12,13,14,15,16,17,18].map((i,k)=>({
+    i, n:["img_mail.png","img_calendar.png","img_camera.png","img_phone.png","img_alarm_2.png",
+          "img_maps.png","img_workout.png","img_alarm.png","img_red_heart.png","img_stopwatch.png",
+          "img_settings.png","img_ecg.png","img_house.png","img_compass.png","img_weather.png"][k]
+
+  }));
+
+  const box=document.getElementById("hexMini");
+  const K=0.585;
+  box.style.width=(HOR*K)+"px";
+  box.style.height=(VER*K)+"px";
+
+  const c0=idxToColRow(0), p0=pivotOf(c0.row,c0.col);
+  const pan={x:CTR_X-p0.x, y:CTR_Y-p0.y};
+
+  [...FILL,...REAL].forEach(it=>{
+    const {row,col}=idxToColRow(it.i);
+    const p=pivotOf(row,col);
+    const t=transform(p.x+pan.x, p.y+pan.y, R_OUT);
+    if(t.r<=0.5) return;
+    const d=document.createElement("div");
+    d.className="hexNode"+(it.i===1?" hi":"");
+    d.style.left=((t.x-t.r)*K)+"px";
+    d.style.top =((t.y-t.r)*K)+"px";
+    d.style.width=d.style.height=(t.r*2*K)+"px";
+    if(it.i>3){ d.style.opacity=.32; }
+    if(it.t) d.title=it.t;
+    const img=document.createElement("img");
+    img.src=RES+it.n;
+    d.appendChild(img);
+    box.appendChild(d);
+  });
+  const cap=document.createElement("div");
+  cap.className="hexCap";
+  cap.textContent="中心 = 时钟，蓝圈 = 计算器（第 1 格）；灰的是占位图";
+  box.appendChild(cap);
+})();
+
+/* ================================================================
+   8. 交互
+   ================================================================ */
+document.getElementById("btnReset").onclick=()=>runSeq("C");
+document.getElementById("btnEh").onclick=()=>runSeq("1/(1/4700+1/10000)");
+document.getElementById("btnEh2").onclick=()=>runSeq("5/1000");
+
+document.getElementById("tabCalc").onclick=()=>{
+  document.getElementById("calcScr").style.display="block";
+  document.getElementById("menuScr").style.display="none";
+  document.getElementById("tabCalc").classList.add("on");
+  document.getElementById("tabMenu").classList.remove("on");
+};
+document.getElementById("tabMenu").onclick=()=>{
+  document.getElementById("calcScr").style.display="none";
+  document.getElementById("menuScr").style.display="flex";
+  document.getElementById("tabMenu").classList.add("on");
+  document.getElementById("tabCalc").classList.remove("on");
+};
+
+buildKeys();
+refresh();
+</script>
+<script>
+(function(){
+  const cases=[
+ ["1+2E","3"],["12+34E","46"],["2+3*4E","14"],["10-2*3E","4"],["100/8E","12.5"],
+ ["0.1+0.2E","0.3"],["1/3E","0.333333"],["2*3.5E","7"],["200*10%E","20"],["50%E","0.5"],
+ ["2*(3+4)E","14"],["5NE","-5"],["5NNE","5"],["12+5NE","7"],["5+NE","5"],
+ ["9+9E1","1"],["9+9E+1E","19"],["12B","1"],["12*B","12"],["5+*3E","15"],
+ ["5*-3E","-15"],["5+-3E","2"],["5-3NE","8"],["1/0E","\u9519\u8bef"],["5/1000E","0.005"],
+ ["1/(1/1000+1/1000)E","500"],["C","0"],["12+","12"],["2*(3+4","14"],["5(","5"],
+ ["1+2)","3"],["0.1+0.2","0.3"],[".5","0.5"],["007","7"],["1/3*3E","1"]
+  ];
+  const out=[]; let fail=0;
+  cases.forEach(c=>{
+    window.runSeq("C");
+    window.runSeq(c[0]);
+    const r=document.getElementById("lblRes").textContent;
+    const ok=(r===c[1]);
+    if(!ok) fail++;
+    out.push({seq:c[0], got:r, want:c[1], ok});
+  });
+
+  /* 汇总框 */
+  const host=document.getElementById("verifyHost");
+  const bad=fail>0;
+  host.innerHTML =
+    '<div class="kpi">'+
+      '<div class="box ok"><b>'+cases.length+'</b><span>用例总数</span></div>'+
+      '<div class="box '+(bad?'':'ok')+'" style="'+(bad?'border-color:#fecaca;background:#fef2f2':'')+'">'+
+        '<b style="'+(bad?'color:#b91c1c':'color:#047857')+'">'+fail+'</b><span>失败</span></div>'+
+    '</div>';
+
+  /* 明细表 */
+  const tbl=document.createElement("table");
+  tbl.innerHTML='<tr><th>#</th><th>按键序列</th><th>结果行</th><th>期望</th><th>结论</th></tr>'+
+    out.map((o,i)=>
+      '<tr><td>'+(i+1)+'</td>'+
+      '<td class="mono">'+o.seq.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")+'</td>'+
+      '<td class="mono" style="font-weight:600;color:'+(o.ok?"#047857":"#b91c1c")+'">'+o.got+'</td>'+
+      '<td class="mono">'+o.want+'</td>'+
+      '<td>'+(o.ok?'<span class="pill" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0">通过</span>'
+                  :'<span class="pill" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca">失败</span>')+'</td></tr>'
+    ).join("");
+  const wrap=document.createElement("div");
+  wrap.className="scroll";
+  wrap.style.maxHeight="620px";
+  wrap.appendChild(tbl);
+  host.appendChild(wrap);
+
+  /* 给无头浏览器取结果用的纯文本哨兵 */
+  const pre=document.createElement("pre");
+  pre.id="verifyOut";
+  pre.style.display="none";
+  pre.textContent="VERIFY_START\n"+
+    out.map(o=>(o.ok?"ok   ":"FAIL ")+o.seq+" got="+o.got+" want="+o.want).join("\n")+
+    "\nTOTAL "+cases.length+" FAILED "+fail+"\nVERIFY_END";
+  document.body.appendChild(pre);
+})();
+</script>
+</body>
+</html>

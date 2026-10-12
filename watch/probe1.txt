@@ -1,0 +1,133 @@
+[1] buffer cleared
+[2] pulsing RTS (reset)...
+[2] waiting for boot...
+SFBL
+Serial:c2,Chip:4,Package:3,Rev:3  Reason:00000000
+Serial PowerOnMOde:0 rtc_record:00000000
+
+ \ | /
+- SiFli Corporation
+ / | \     build on Sep 20 2026, 2.4.4 build 5ff35ef4
+ 2020 - 2022 Copyright by SiFli team
+mount /dev sucess
+[2272] I/drv.rtc main: PSCLR=0x80000100 DivAI=128 DivAF=0 B=256
+[2301] I/drv.rtc main: RTC use LXT RTC_CR=00000001
+
+[2322] I/drv.rtc main: Init RTC, wake = 0
+
+[2484] I/drv.audprc main: init 00 ADC_PATH_CFG0 0x606
+
+[2505] I/drv.audprc main: HAL_AUDPRC_Init res 0
+
+[2526] I/drv.audcodec main: HAL_AUDCODEC_Init res 0
+
+[2547] I/TOUCH main: Regist touch screen driver, probe=0x12026f79 
+lvsf_font_load: faces 1 ft_cache_size 300000
+call par CFG1(3313)
+fc 9, xtal 2000, pll 2154
+call par CFG1(3313)
+fc 7, xtal 2000, pll 1726
+[2804] I/NO_TAG app_watc: rtc at boot: 2000-01-01 00:00:00
+[2829] W/NO_TAG app_watc: rtc at boot: value unusable -> writing fallback 2024-01-01 12:00
+[3148] I/NO_TAG app_watc: rtc after fallback: 2024-01-01 12:00:00
+[3180] I/NO_TAG app_watc: pm: wakeup ready  KEY1(pin 34) -> AON 10  |  sleep=double-edge, hibernate=high-level
+[3227] I/drv.lcd app_watc: [NONE] -> [OPENING]
+[3247] I/drv.lcd lcd_task: open
+[3261] I/drv.epic lcd_task: drv_gpu opened.
+[3278] I/drv.lcd lcd_task: HW open
+[3313] I/drv.lcd lcd_task: Try registered LCD driver...
+msh />
+CO5300_ReadID 0x331100 
+[5641] I/co5300 lcd_task: LCD module use CO5300 IC 
+
+
+CO5300_ReadID 0x331100 
+[11891] I/co5300 lcd_task: LCD module use CO5300 IC 
+
+[11912] I/drv.lcd lcd_task: Found lcd co5300 id:331100h
+[11934] I/drv.lcd lcd_task: HW open done.
+[11950] I/drv.lcd lcd_task: [OPENING] -> [INITIALIZED]
+[11971] I/drv.lcd lcd_task: open done.
+[11990] I/drv.lcd_fb app_watc: drv_lcd_fb_init
+[12011] I/drv.lcd_fb app_watc: drv_lcd_fb_init done.
+[12049] I/TOUCH app_watc: Open
+[12067] I/TOUCH tp_init: Find touch screen driver...
+[12087] I/TOUCH tp_init: Probe 12026f79
+[12105] I/TOUCH tp_init: touch screen found driver  0x2003be38, ft6146
+[12133] I/TOUCH app_watc: Opened.
+[12217] I/LVGL app_watc: [littlevgl2rtt] Welcome to the littlevgl2rtt lib.
+[12307] D/APP.FWK app_watc: send msg[GUI_APP_MSG_RUN_APP] [Main] to gui_app_mbx tick:309.
+[12344] I/APP.FWK.INT app_watc: [Main]
+[13308] I/drv.lcd lcd_task: Auto turn on display.
+[13330] I/drv.lcd lcd_task: set brightness 50
+[13349] I/drv.lcd lcd_task: display on
+[13365] I/drv.lcd lcd_task: [INITIALIZED] -> [ON]
+[13386] I/drv.lcd lcd_task: set brightness 100
+[13404] I/drv.lcd lcd_task: display on
+[13423] D/APP.SCHE app_watc: ----------------app_schedule_task---------------start
+[13454] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_RUN_APP] tick:309
+[13483] I/APP.SCHE app_watc: app[Main] do LOAD, 2004b804
+[13505] I/APP.FWK app_watc: finding Main in builtin apps...
+[13529] D/APP.SCHE app_watc: app[Main] tgt_state [LAUNCHED] -> [RUNNING]
+[13558] I/APP.SCHE app_watc: app[Main] do START, 2004b804
+[13580] I/APP.FWK.INT app_watc: [Main]
+[13596] D/APP.FWK app_watc: send msg[GUI_APP_MSG_OPEN_PAGE] [0x2004b804] to gui_app_mbx tick:348.
+[13634] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_OPEN_PAGE] tick:348
+[13662] D/APP.SCHE app_watc: app[Main] create page[root] 2004b8d0
+[13688] D/APP.SCHE app_watc: page[Main][root] tgt_state [CREATED] -> [RESUMED]
+[13717] D/APP.SCHE app_watc: Stop all app, and return to main app
+[13756] I/APP.SCHE app_watc: page[Main][root] do ONSTART, 2004b8d0
+[14901] E/drv.ft6146 tp_init: ft6146 id_H=64
+[14926] E/drv.ft6146 tp_init: ft6146 id_L=56
+[15058] I/APP.SCHE app_watc: page[Main][root] do ONRESUME, 2004b8d0
+[15086] I/APP.SCHE app_watc: Try setup trans-anim
+[15105] I/APP.SCHE app_watc: Trans-anim is OFF, skip.
+[15127] D/APP.SCHE app_watc: app_schedule_task done.
+[340763] I/APP.FWK.PM app_watc: fsm:Cur[GUI_STATE_ACTIVE],Action[GUI_PM_ACTION_SLEEP]
+[340799] I/APP.FWK.PM app_watc: change_gui_state:[GUI_STATE_ACTIVE]->[GUI_STATE_INACTIVE_PENDING]
+[340836] I/NO_TAG app_watc: no input:10027
+[340854] I/APP.FWK.PM app_watc: change_gui_state:[GUI_STATE_INACTIVE_PENDING]->[GUI_STATE_INACTIVE]
+[340890] I/APP.FWK.PM app_watc: gui_suspend
+[340909] I/drv.lcd lcd_task: Power off
+[340924] I/drv.epic lcd_task: drv_gpu closed.
+[340942] I/drv.lcd lcd_task: display off
+[340959] I/drv.lcd lcd_task: [ON] -> [OFF]
+[340976] I/drv.lcd lcd_task: HW close
+[340992] I/drv.lcd lcd_task: HW close done.
+[341008] I/drv.lcd lcd_task: Power off done
+[341030] I/TOUCH tp_off: Power off
+[341047] I/TOUCH tp_off: Power off done.
+[2] BOOT BANNER SEEN -- reset worked
+[3] trying to send keepawake...
+>>> keepawake   (attempt 1)
+>>> keepawake   (attempt 2)
+>>> keepawake   (attempt 3)
+>>> keepawake   (attempt 4)
+>>> keepawake   (attempt 5)
+>>> keepawake   (attempt 6)
+>>> keepawake   (attempt 7)
+>>> keepawake   (attempt 8)
+>>> keepawake   (attempt 9)
+>>> keepawake   (attempt 10)
+>>> keepawake   (attempt 11)
+>>> keepawake   (attempt 12)
+>>> keepawake   (attempt 13)
+>>> keepawake   (attempt 14)
+>>> keepawake   (attempt 15)
+>>> keepawake   (attempt 16)
+>>> keepawake   (attempt 17)
+>>> keepawake   (attempt 18)
+>>> keepawake   (attempt 19)
+>>> keepawake   (attempt 20)
+>>> keepawake   (attempt 21)
+>>> keepawake   (attempt 22)
+[3] !! keepawake never answered -- board is probably asleep already
+[4] rtc sample 1
+>>> rtc_now
+[4] rtc sample 2  (after 15s)
+>>> rtc_now
+[5] switching to the clock app
+>>> to_clock
+[5] done, still listening 5s
+
+[closed] captured 5592 chars

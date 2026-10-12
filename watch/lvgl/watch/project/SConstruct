@@ -1,0 +1,58 @@
+import os
+import rtconfig
+
+# Check SDK 
+SIFLI_SDK = os.getenv('SIFLI_SDK')
+if not SIFLI_SDK:
+    print("Please run set_env.bat in root folder of SIFLI SDK to set environment.")
+    exit()
+from building import *
+
+# Prepare environment.
+PrepareEnv()
+
+################################## change rtconfig.xxx to customize build ########################################
+
+# Add bootloader project
+AddBootLoader(SIFLI_SDK,rtconfig.CHIP)
+
+# --- 蓝牙必需的：LCPU 侧固件 ---------------------------------------------
+#
+# 这块芯片是双核：BLE 协议栈（rwip / rwble / 射频调度）跑在 LCPU 上，
+# HCPU 只是客户端（通过硬件 mailbox 通信）。
+#
+# 而 52X 用的是「ROM + RAM」模式（CONFIG_LCPU_RUN_ROM_COMBINE_RAM）：
+# LCPU 片上 ROM 里只有基础代码，真正的 BLE 代码要先被搬到 LCPU 的 RAM
+# （LPSYS_RAM，0x20400000）才能跑起来。
+#
+# 干这件搬运活的函数是 lcpu_power_on() 里的 lcpu_img_install()
+#   drivers/cmsis/sf32lb52x/bf0_lcpu_init.c:181
+# 它在 SDK 里是 __WEAK 空函数。真正的实现不写在源码里，而是由「LCPU 子工程」
+# 编译出来，再由 tools/build/building.py:1458-1465（"embed child binary in
+# parent project"）转成 .c 嵌进 HCPU 的 main.bin。
+#
+# 所以：**少了下面这一句，LCPU 的 RAM 就是空的，协议栈永远起不来。**
+# 症状和我们先前实测到的一模一样 —— 开机没有 "BLE ready!"、
+# BLE_POWER_ON_IND 一直不来、板载 `lcpu` 控制台无应答（那边根本没代码在跑）。
+#
+# SDK 里每一个 BLE / BT 示例的 SConstruct 都有这一句
+# （example/ble/peripheral/project/SConstruct:37、example/bt/* 等），
+# 我们这份 watch 工程是从非蓝牙示例改的，所以漏掉了。
+AddLCPU(SIFLI_SDK, rtconfig.CHIP)
+
+# Set default compile options
+SifliEnv()
+
+TARGET = rtconfig.OUTPUT_DIR + rtconfig.TARGET_NAME + '.' + rtconfig.TARGET_EXT
+# Prepare building environment
+objs = PrepareBuilding(None)
+env = GetCurrentEnv()
+
+# Build application.
+DoBuilding(TARGET, objs)
+
+# Add flash table buld.
+AddFTAB(SIFLI_SDK,rtconfig.CHIP)
+
+# Generate download .bat script
+GenDownloadScript(env)

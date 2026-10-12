@@ -1,0 +1,68 @@
+{
+  "_说明": [
+    "════════════════════════════════════════════════════════════════",
+    "  ai_brain_config.json —— 「大脑」的配置。  改完存盘即可，不用重启别的。",
+    "════════════════════════════════════════════════════════════════",
+    "",
+    "  ★ 最快上手：",
+    "    1. 把下面 provider 改成 \"openai\"     （openai 是「接口格式」的名字，不是公司）",
+    "    2. 把 provider 那行改成具体一家：见下面 _presets 的键名",
+    "       例如 \"deepseek\" / \"qwen\" / \"zhipu\" / \"moonshot\" / \"hunyuan\" / \"openai\"",
+    "       改完 base_url 和 model 会自动填上，不用你抄",
+    "    3. 把 api_key 填上",
+    "    4. 自测：  python ai_brain.py 你好",
+    "",
+    "  ★ 不想花钱 / 还没申请 key：",
+    "    provider 保持 \"offline\"，用的是本地假大脑，",
+    "    能答时间、日期、算术、打招呼，其它问题会回显。",
+    "    链路照样能验证通 —— 而且这样调试时不用怀疑网络和额度。",
+    "",
+    "  ★ 各家 key 去哪申请（2026 年，都是注册后给额度或按量付费）：",
+    "    deepseek  https://platform.deepseek.com     最便宜，中文好",
+    "    qwen      https://bailian.console.aliyun.com   通义千问，有免费额度",
+    "    zhipu     https://open.bigmodel.cn          智谱 GLM，glm-4-flash 免费",
+    "    moonshot  https://platform.moonshot.cn      Kimi",
+    "    hunyuan   https://console.cloud.tencent.com/hunyuan",
+    "    openai    https://platform.openai.com      需要海外网络"
+  ],
+
+  "provider": "offline",
+
+  "api_key": "",
+
+  "base_url": "",
+  "model": "",
+
+  "_presets_说明": "上面 provider 填这些名字，base_url 和 model 会自动用下面这套（也可以自己手填覆盖）。",
+  "_presets": {
+    "deepseek": { "base_url": "https://api.deepseek.com/v1",                          "model": "deepseek-chat" },
+    "qwen":     { "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",     "model": "qwen-plus" },
+    "zhipu":    { "base_url": "https://open.bigmodel.cn/api/paas/v4",                  "model": "glm-4-flash" },
+    "moonshot": { "base_url": "https://api.moonshot.cn/v1",                            "model": "moonshot-v1-8k" },
+    "hunyuan":  { "base_url": "https://api.hunyuan.cloud.tencent.com/v1",              "model": "hunyuan-lite" },
+    "openai":   { "base_url": "https://api.openai.com/v1",                             "model": "gpt-4o-mini" }
+  },
+
+  "_system_prompt_说明": [
+    "这段提示词是产品的一部分，不是随手写的。手表屏幕只有 390x450，",
+    "而且显示用的是 LVGL label —— Markdown 的 **粗体**、- 列表 在那边",
+    "就是一堆原始符号。所以必须明确要求「短」和「不要 Markdown」。",
+    "字数上限（200 字）也是必须的：手表接收缓冲只有 1024 字节，",
+    "一个汉字占 3 字节，超过就只能在电脑端截断。",
+    "想让它回答得再短一点，就把「两三句话」改成「一句话」。"
+  ],
+  "system_prompt": "你是一个运行在智能手表上的助手。回答必须简短：最多两三句话，整段回答不要超过 200 个字。不要用 Markdown（不要星号、井号、短横线列表、代码块），因为手表屏幕又小又窄，那些符号会原样显示出来。不要客套，不要重复我的问题，直接给答案。",
+
+  "timeout": 30,
+  "max_tokens": 200,
+
+  "_proxy_说明": [
+    "留空 \"\" = 跟随系统/环境变量里的代理设置（默认）。",
+    "写 \"none\" = 强制不走代理。",
+    "写具体地址（如 \"http://127.0.0.1:7890\"）= 只用这个代理。",
+    "★ 什么时候需要改：如果你开着 VPN/代理，而接口报 HTTP 502/503/504，",
+    "  那多半是本机代理在报错，不是对方服务器挂了。这时候填 \"none\" 试一下。",
+    "  国内模型（deepseek/qwen/zhipu）走代理绕一圈经常更慢甚至失败。"
+  ],
+  "proxy": ""
+}

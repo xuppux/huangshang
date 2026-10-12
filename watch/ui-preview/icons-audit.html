@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>图标资源体检 · 黄山派 watch 工程</title>
+<style>
+  :root{--bg:#eef1f6;--card:#fff;--line:#e2e7ef;--text:#141922;--muted:#697586;--dim:#94a0b0;--accent:#00a6c4}
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);margin:0;
+       font:14px/1.65 -apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 20px 60px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px}
+  .notice{margin-top:14px;padding:12px 15px;border-radius:9px;background:#fffbeb;
+          border:1px solid #fde68a;color:#78350f;font-size:13px}
+  .stat{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+  .box{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-width:120px}
+  .box b{display:block;font-size:22px;line-height:1.2}
+  .box span{font-size:11.5px;color:var(--muted)}
+  .box.bad{border-color:#fecaca;background:#fef2f2}
+  .box.bad b{color:#b91c1c}
+  .box.ok{border-color:#a7f3d0;background:#ecfdf5}
+  .box.ok b{color:#047857}
+  .sec{margin:26px 0 10px;font-size:15px;font-weight:650;display:flex;align-items:center;gap:9px}
+  .sec i{display:inline-block;width:5px;height:17px;border-radius:3px;background:var(--accent)}
+  .sec.bad i{background:#dc2626}
+  .row{display:flex;flex-wrap:wrap;gap:10px}
+  .c{background:#fff;border:1px solid var(--line);border-radius:9px;padding:8px;text-align:center;width:118px}
+  .c img{display:block;width:84px;height:84px;margin:0 auto;background:#0b0e13;border-radius:7px;object-fit:contain}
+  .c .n{font-size:9.5px;color:var(--muted);margin-top:5px;word-break:break-all;line-height:1.25}
+  .c .d{font-size:9px;color:var(--dim);font-family:Consolas,monospace}
+  .c.hit{border-color:#fca5a5;background:#fef2f2}
+  .c.hit .n{color:#991b1b}
+  .c.hit .d{color:#b91c1c;font-weight:700}
+  code{font-family:Consolas,monospace;font-size:12px;background:#eef2f7;padding:1px 5px;border-radius:4px;color:#0f4c5c}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>图标资源体检 · 黄山派 watch 工程</h1>
+  <div class="sub">
+    <code>src/resource/images/common/ezip/</code> 下的全部 61 张 PNG，逐张渲染出来看
+  </div>
+  <div class="notice">
+    <b>为什么做这一页：</b>把整个目录铺开看一遍，才发现有 8 张文件名像图标、内容是汉字的坏资源。
+    光看文件名或文件大小都发现不了 —— 必须真的渲染出来看。
+  </div>
+
+  <div class="stat">
+    <div class="box"><b>61</b><span>图标资源总数</span></div>
+    <div class="box ok"><b>53</b><span>正常</span></div>
+    <div class="box bad"><b>8</b><span>坏（内容是汉字）</span></div>
+  </div>
+
+  <div class="sec bad"><i></i>坏掉的 8 张 —— 画的是「思澈科技」四个字</div>
+  <div class="row" id="badRow"></div>
+  <div style="margin-top:10px;color:var(--muted);font-size:12.5px">
+    思 / 澈 / 科 / 技 各出现两次。把这 8 张按名字排回去，正好拼出思澈科技的名字 ——
+    典型的字体图集生成时覆盖了图标文件。<br>
+    <b>已交叉核对</b>：立创桌面版、SDK 的 <code>watch</code>(v8)、<code>watch_v9</code> 三份副本里，
+    这 8 个文件<b>逐字节完全一致</b>，所以是上游发出来就是这样，不是下载损坏、也不是本地改动。
+  </div>
+
+  <div class="sec"><i></i>其余 53 张 —— 都正常</div>
+  <div class="row" id="okRow"></div>
+</div>
+
+<script>
+const RES = "../lvgl/watch/src/resource/images/common/ezip/";
+const NAMES = ["airplane","bluetooth","clock_40","clock_80","clock_mickey_eyes01","clock_mickey_eyes02",
+"clock_mickey_eyes03","clock_mickey_shoe01","clock_mickey_shoe02","clock_mickey_shoe03",
+"clock_mickey_shoe04","clock_mickey_shoe05","compass_arrow_shadow","dn","down_arrow","eco",
+"gra_corner_clock1","gra_corner_clock2","house","human1","human2","img_LiChuang","img_activity",
+"img_alarm","img_alarm_2","img_calendar","img_camera","img_clock","img_compass","img_ecg",
+"img_group","img_itunes","img_left_arrow","img_mail","img_maps","img_messages","img_mountion",
+"img_passbook","img_phone","img_photos","img_red_heart","img_remote","img_settings","img_stocks",
+"img_stopwatch","img_workout","img_world_clock","ms_earth","ms_water","up_arrow","weather",
+"wt_circle","wt_clock","wt_cloudy","wt_compass","wt_earth","wt_rain","wt_snow","wt_sunny",
+"wt_weather","wt_wind"];
+
+const BROKEN = {
+  "img_calendar":"思", "img_camera":"澈", "img_phone":"技", "img_maps":"科",
+  "img_photos":"思", "img_remote":"澈", "img_world_clock":"技", "img_stocks":"科"
+};
+
+function card(n){
+  const g = BROKEN[n];
+  const d = document.createElement("div");
+  d.className = "c" + (g ? " hit" : "");
+  d.innerHTML = `<img src="${RES}${n}.png" alt="${n}">
+    <div class="n">${n}</div>
+    <div class="d">${g ? "画的是「" + g + "」" : "正常"}</div>`;
+  return d;
+}
+const badRow = document.getElementById("badRow");
+const okRow  = document.getElementById("okRow");
+NAMES.forEach(n => (BROKEN[n] ? badRow : okRow).appendChild(card(n)));
+</script>
+</body>
+</html>

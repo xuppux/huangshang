@@ -1,0 +1,71 @@
+﻿msh />idle screen-off: DISABLED (kept awake)
+msh />switching to clock app...
+[70149] D/APP.FWK tshell: send msg[GUI_APP_MSG_RUN_APP] [clock] to gui_app_mbx tick:2076.
+[70185] I/APP.FWK.INT tshell: [clock]
+msh />[70767] D/APP.SCHE app_watc: ----------------app_schedule_task---------------start
+[70798] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_RUN_APP] tick:2076
+[70827] I/APP.SCHE app_watc: app[clock] do LOAD, 20047060
+[70850] I/APP.FWK app_watc: finding clock in builtin apps...
+[70873] D/APP.SCHE app_watc: app[clock] tgt_state [LAUNCHED] -> [RUNNING]
+[70902] I/APP.SCHE app_watc: app[clock] do START, 20047060
+[70925] I/APP.FWK.INT app_watc: [clock]
+[70941] D/APP.FWK app_watc: send msg[GUI_APP_MSG_OPEN_PAGE] [0x20047060] to gui_app_mbx tick:2100.
+[70979] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_OPEN_PAGE] tick:2100
+[71008] D/APP.SCHE app_watc: app[clock] create page[root] 2004a000
+[71034] D/APP.SCHE app_watc: page[clock][root] tgt_state [CREATED] -> [RESUMED]
+[71064] D/APP.SCHE app_watc: Pause all app, and resume to clock app
+[71089] D/APP.SCHE app_watc: page[Main][root] tgt_state [RESUMED] -> [PAUSED]
+[71119] I/APP.SCHE app_watc: page[Main][root] do ONPAUSE, 2004b8f4
+[71159] I/APP.SCHE app_watc: page[clock][root] do ONSTART, 2004a000
+service_reset_time:  124:0:1 - 12:0:2 - 1
+[82343] I/APP.SCHE app_watc: page[clock][root] do ONRESUME, 2004a000
+STATE_PAUSED: clock[rotate_b] init
+app_clock_rotate_bg img_size:h:150,w:150 
+STATE_ACTIVE: clock[band] init
+STATE_ACTIVE: clock[band] resume
+watchface: rtc UNSET -> "?????????" hint shown
+calib: rtc unset at first resume -> auto opening panel
+calib: panel open, start 2024-01-01 12:00:02
+[84930] I/APP.SCHE app_watc: Try setup trans-anim
+app_anim_buf_alloc: 0x602310b0 index 0 size 351000
+[84987] I/APP.ANI app_watc: buf = 602310b0
+[85044] I/APP.ANI app_watc: app_trans_animation_obj_create = 20056cdc
+app_anim_buf_alloc: 0x601db598 index 1 size 351000
+[85094] I/APP.ANI app_watc: buf = 601db598
+[86235] I/APP.ANI app_watc: app_trans_animation_obj_create = 20056e54
+[86265] I/APP.ANI app_watc: Start free run animation
+[86323] I/APP.ANI app_watc: app_trans_animation_setup end, cost=42ms
+
+[86361] I/APP.SCHE app_watc: Trans-anim setup done.
+[86383] D/APP.SCHE app_watc: --Pause app_schedule_task--
+[86404] D/APP.SCHE app_watc: app_schedule_task done.
+[96244] I/APP.ANI app_watc: free_run_ready 0 
+
+[98016] I/APP.ANI app_watc: wait_refr_task_cb 0
+
+[98039] I/APP.ANI app_watc: anim_free_run_ready 0 
+
+[98059] I/APP.ANI app_watc: app_trans_anim_free_run_clean
+
+[98083] I/APP.ANI app_watc: app_trans_animation_obj_destroy = 20056e54
+app_anim_buf_free: 0x601db598
+[98123] I/APP.ANI app_watc: app_trans_animation_obj_destroy = 20056cdc
+app_anim_buf_free: 0x602310b0
+[98178] I/APP.SCHE app_watc: Trans-anim finish, res=0
+[98201] D/APP.SCHE app_watc: --Resume app_schedule_task--
+Mon Jan  1 12:00:03 2024
+msh />calib: command not found.
+msh />calib: command not found.
+msh />calib: command not found.
+msh />calib: command not found.
+msh />calib: command not found.
+msh />calib: command not found.
+msh />calib: command not found.
+msh />calib: command not found.
+msh />calib: command not found.
+msh />calib: command not found.
+msh />calib: command not found.
+msh />calib: command not found.
+msh />Mon Jan  1 12:00:15 2024
+msh />calib: command not found.
+msh />

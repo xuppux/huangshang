@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>表盘电量指示 · 验收与排查单</title>
+<style>
+  :root{
+    --ink:#1b1f27; --ink2:#5b6472; --ink3:#8b95a5;
+    --line:#e5e8ee; --bg:#f7f8fa; --card:#ffffff;
+    --green:#0f9d58; --red:#d93025; --amber:#b8860b; --blue:#1a73e8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:400 15px/1.7 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:860px;margin:0 auto;padding:36px 24px 72px}
+  h1{font-size:24px;font-weight:600;margin:0 0 6px}
+  .sub{color:var(--ink2);font-size:13.5px;margin-bottom:26px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+        padding:20px 22px;margin-bottom:16px}
+  .card h2{font-size:16px;font-weight:600;margin:0 0 12px;display:flex;
+           align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+  .banner{border-left:4px solid var(--amber);background:#fffbf0}
+  .banner h2{color:#8a6400}
+  p{margin:0 0 10px}
+  p:last-child{margin-bottom:0}
+  code{background:#eef1f6;padding:1px 6px;border-radius:5px;
+       font:400 13px ui-monospace,Consolas,monospace;color:#2b3444}
+  pre{background:#1f2430;color:#e6e9ef;padding:14px 16px;border-radius:9px;
+      overflow-x:auto;font:400 13px/1.65 ui-monospace,Consolas,monospace;margin:10px 0}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin:4px 0 2px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);
+        vertical-align:top}
+  th{font-weight:600;color:var(--ink2);font-size:12.5px;
+     letter-spacing:.02em;background:#fafbfc}
+  tr:last-child td{border-bottom:none}
+  .sw{display:inline-block;width:11px;height:11px;border-radius:3px;
+      margin-right:7px;vertical-align:-1px}
+  .k{color:var(--ink3);font-size:12.5px}
+  ul{margin:6px 0 0;padding-left:20px}
+  li{margin-bottom:6px}
+  .tag{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;
+       background:#eef1f6;color:var(--ink2);margin-left:8px;vertical-align:1px}
+  .ok{color:var(--green);font-weight:600}
+  .warn{color:var(--amber);font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>表盘电量指示 · 验收与排查单</h1>
+  <div class="sub">电量百分比 + 充电状态 + 充电图标，已加在时间界面右上角<br>
+    2026-09-22 · 固件已编译烧录并通过串口验证</div>
+
+  <div class="card banner">
+    <h2><span class="dot" style="background:var(--amber)"></span>先说结论：板子上现在没有接电池</h2>
+    <p>所以表盘上显示的是灰色的 <code>--%</code>，而不是一个数字。<b>这是对的，不是坏了。</b></p>
+    <p>原因有点反直觉：<b>没接电池时，电池检测引脚读到的不是 0 V，而是大约 4.3 V</b> ——
+       比满电锂电池（4.2 V）还高。立创官方的 ADC 例程里，那张标注「接入电池前」的截图
+       读到的就是 4.30~4.35 V，和我们现在读到的 4.26~4.37 V 完全一致。</p>
+    <p>如果不管这一条、直接把电压换算成百分比，没插电池的板子会理直气壮地显示
+       <b>100%</b> —— 一个骗人的数字。<span class="ok">现在它不会了。</span></p>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:var(--blue)"></span>四种状态分别长什么样</h2>
+    <table>
+      <thead>
+        <tr><th style="width:22%">状态</th><th style="width:30%">界面</th><th>什么时候出现</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="sw" style="background:#fff;border:1.5px solid #c7ccd6"></span>放电中</td>
+          <td>白色数字 + 白色电量条</td>
+          <td>正常用电池供电时。低于 20% 数字和电量条一起变<b>红</b></td>
+        </tr>
+        <tr>
+          <td><span class="sw" style="background:#3de08a"></span>充电中</td>
+          <td>绿色 + 百分比左边一个闪电 + 下方一行小字「充电中」</td>
+          <td>插着充电线、且充电器真的在工作</td>
+        </tr>
+        <tr>
+          <td><span class="sw" style="background:#3de08a"></span>已充满</td>
+          <td>绿色满格，<b>闪电消失</b> + 下方小字「已充满」</td>
+          <td>充电完成</td>
+        </tr>
+        <tr>
+          <td><span class="sw" style="background:#9aa3b2"></span>读不到</td>
+          <td>灰色 <code>--%</code> + 空格子（不是空的电量条）</td>
+          <td>没接电池 / 接线不对 / 读数在抖。<b>现在就是这一种</b></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="k" style="margin-top:12px">闪电放在百分比<b>左边</b>而不是压在电池上：
+       压在电池上时，充到一半闪电的右半截会落到透明背景上，深色看不见、白色又和右边的字糊在一起。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:var(--green)"></span>怎么验证（不用看屏幕，看串口就行）</h2>
+    <p>表盘每 10 秒读一次电池，每次读都会往串口打一行。在 <code>watch</code> 目录下跑：</p>
+    <pre>.\serial.ps1 -Port COM3 -Seconds 30</pre>
+    <p>会看到这样的行：</p>
+    <pre>ch[7]voltage=43057;
+bat: 4332 mV -> -1%  state=unknown  spread=91 mV  vbus=0 eoc=1 hw=0x01  CHG_SR=0x00000140 CHG_CR1=0xa87bc530</pre>
+    <table>
+      <thead><tr><th style="width:26%">字段</th><th>怎么读</th></tr></thead>
+      <tbody>
+        <tr><td><code>4332 mV</code></td><td>电池电压。真电池应该在 <b>3500~4200</b> 之间</td></tr>
+        <tr><td><code>-1%</code></td><td>判为「读不到」时是 -1，界面上就画 <code>--%</code></td></tr>
+        <tr><td><code>spread=91 mV</code></td><td><b>关键指标。</b>一次里连读 3 遍的极差：真电池约 2 mV，悬空 35~105 mV</td></tr>
+        <tr><td><code>vbus=0</code></td><td>1 = 充电器认为插上电了</td></tr>
+        <tr><td><code>hw=0x01</code></td><td>充电状态机的当前档位（1=OFF）</td></tr>
+      </tbody>
+    </table>
+    <p class="k" style="margin-top:12px">串口里的 <code>-1</code>、<code>unknown</code> 不是报错，是「读不到」的正常表示。</p>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:var(--amber)"></span>接上电池之后该看到什么</h2>
+    <ul>
+      <li>电压落到 <b>3.5~4.2 V</b>，<code>spread</code> 掉到 <b>个位数</b>，百分比变成真实数字。</li>
+      <li>插上充电线后 <code>vbus</code> 应该翻成 <code>1</code>，界面出现绿色闪电 + 「充电中」。</li>
+      <li><b class="warn">如果电压正常但 vbus 一直是 0</b>，说明这块板的充电检测不走芯片内部的充电器，
+          得改走外部那颗 I2C 充电芯片（要另开 <code>CONFIG_BSP_USING_CHARGER=y</code>）。
+          这一条我手上没有充电器条件，还没实测过 —— 你第一次插线时盯一眼串口就能定性。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:var(--ink3)"></span>代码在哪 · 想改什么改哪里</h2>
+    <table>
+      <thead><tr><th style="width:44%">改动</th><th>位置</th></tr></thead>
+      <tbody>
+        <tr><td>整块电量指示显示/隐藏</td><td><code>app_clock_band.c</code> 的 <code>#define BAT_SHOW</code> 改 0</td></tr>
+        <tr><td>不要「充电中 / 已充满」那行小字</td><td><code>#define BAT_SHOW_STATE</code> 改 0</td></tr>
+        <tr><td>图标大小、位置、离边距</td><td><code>BAT_BODY_W/H</code>、<code>BAT_MARGIN_R/T</code>（上边距要 &gt; 28）</td></tr>
+        <tr><td>颜色（正常/充电/低电/读不到）</td><td><code>BAT_C_NORMAL / CHARGE / LOW / NONE</code></td></tr>
+        <tr><td>多久读一次</td><td><code>BAT_PERIOD_S</code>（默认 10 秒）</td></tr>
+        <tr><td>电压→电量的曲线</td><td><code>app_utils/bat_mon.c</code> 里的 <code>curve_dis</code> / <code>curve_chg</code></td></tr>
+        <tr><td>「有没有电池」的判定门槛</td><td>同上，<code>BAT_SPREAD_MV</code> / <code>BAT_MAX_MV</code></td></tr>
+      </tbody>
+    </table>
+    <p class="k" style="margin-top:12px">界面上的东西全是 LVGL 图元现画的（外壳和电量条是圆角矩形，闪电是折线），
+       <b>不需要任何图片资源</b>。想换成图片图标再说。</p>
+  </div>
+
+</div>
+</body>
+</html>

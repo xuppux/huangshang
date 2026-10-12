@@ -1,0 +1,16 @@
+﻿msh />idle screen-off: enabled (10s)
+msh />[1753518] I/APP.FWK.PM app_watc: fsm:Cur[GUI_STATE_ACTIVE],Action[GUI_PM_ACTION_SLEEP]
+[1753554] I/APP.FWK.PM app_watc: change_gui_state:[GUI_STATE_ACTIVE]->[GUI_STATE_INACTIVE_PENDING]
+[1753592] I/NO_TAG app_watc: no input:10007
+[1753609] I/APP.FWK.PM app_watc: change_gui_state:[GUI_STATE_INACTIVE_PENDING]->[GUI_STATE_INACTIVE]
+[1753646] I/APP.FWK.PM app_watc: gui_suspend
+[1753665] I/drv.lcd lcd_task: Power off
+[1753681] I/drv.epic lcd_task: drv_gpu closed.
+[1753699] I/drv.lcd lcd_task: display off
+[1753716] I/drv.lcd lcd_task: [ON] -> [OFF]
+[1753733] I/drv.lcd lcd_task: HW close
+[1753749] I/drv.lcd lcd_task: HW close done.
+[1753766] I/drv.lcd lcd_task: Power off done
+[1753788] I/TOUCH tp_off: Power off
+[1753806] I/TOUCH tp_off: Power off done.
+

@@ -1,0 +1,116 @@
+﻿msh />
+CO5300_ReadID 0x331100 
+[11740] I/co5300 lcd_task: LCD module use CO5300 IC 
+
+[11761] I/drv.lcd lcd_task: Found lcd co5300 id:331100h
+[11783] I/drv.lcd lcd_task: HW open done.
+[11799] I/drv.lcd lcd_task: [OPENING] -> [INITIALIZED]
+[11820] I/drv.lcd lcd_task: open done.
+[11839] I/drv.lcd_fb app_watc: drv_lcd_fb_init
+[11860] I/drv.lcd_fb app_watc: drv_lcd_fb_init done.
+[11898] I/TOUCH app_watc: Open
+[11916] I/TOUCH tp_init: Find touch screen driver...
+[11936] I/TOUCH tp_init: Probe 12026f79
+[11954] I/TOUCH tp_init: touch screen found driver  0x2003be58, ft6146
+[11982] I/TOUCH app_watc: Opened.
+[12066] I/LVGL app_watc: [littlevgl2rtt] Welcome to the littlevgl2rtt lib.
+[12156] D/APP.FWK app_watc: send msg[GUI_APP_MSG_RUN_APP] [Main] to gui_app_mbx tick:304.
+[12194] I/APP.FWK.INT app_watc: [Main]
+[13162] I/drv.lcd lcd_task: Auto turn on display.
+[13184] I/drv.lcd lcd_task: set brightness 50
+[13203] I/drv.lcd lcd_task: display on
+[13219] I/drv.lcd lcd_task: [INITIALIZED] -> [ON]
+[13240] I/drv.lcd lcd_task: set brightness 100
+[13258] I/drv.lcd lcd_task: display on
+[13277] D/APP.SCHE app_watc: ----------------app_schedule_task---------------start
+[13308] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_RUN_APP] tick:304
+[13337] I/APP.SCHE app_watc: app[Main] do LOAD, 2004b828
+[13360] I/APP.FWK app_watc: finding Main in builtin apps...
+[13383] D/APP.SCHE app_watc: app[Main] tgt_state [LAUNCHED] -> [RUNNING]
+[13412] I/APP.SCHE app_watc: app[Main] do START, 2004b828
+[13434] I/APP.FWK.INT app_watc: [Main]
+[13451] D/APP.FWK app_watc: send msg[GUI_APP_MSG_OPEN_PAGE] [0x2004b828] to gui_app_mbx tick:343.
+[13488] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_OPEN_PAGE] tick:343
+[13517] D/APP.SCHE app_watc: app[Main] create page[root] 2004b8f4
+[13542] D/APP.SCHE app_watc: page[Main][root] tgt_state [CREATED] -> [RESUMED]
+[13572] D/APP.SCHE app_watc: Stop all app, and return to main app
+[13611] I/APP.SCHE app_watc: page[Main][root] do ONSTART, 2004b8f4
+[14750] E/drv.ft6146 tp_init: ft6146 id_H=64
+[14775] E/drv.ft6146 tp_init: ft6146 id_L=56
+[14876] I/APP.SCHE app_watc: page[Main][root] do ONRESUME, 2004b8f4
+[14905] I/APP.SCHE app_watc: Try setup trans-anim
+[14924] I/APP.SCHE app_watc: Trans-anim is OFF, skip.
+[14945] D/APP.SCHE app_watc: app_schedule_task done.
+idle screen-off: DISABLED (kept awake)
+msh />switching to clock app...
+[105497] D/APP.FWK tshell: send msg[GUI_APP_MSG_RUN_APP] [clock] to gui_app_mbx tick:3155.
+[105534] I/APP.FWK.INT tshell: [clock]
+msh />[106390] D/APP.SCHE app_watc: ----------------app_schedule_task---------------start
+[106421] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_RUN_APP] tick:3155
+[106452] I/APP.SCHE app_watc: app[clock] do LOAD, 20047060
+[106475] I/APP.FWK app_watc: finding clock in builtin apps...
+[106499] D/APP.SCHE app_watc: app[clock] tgt_state [LAUNCHED] -> [RUNNING]
+[106528] I/APP.SCHE app_watc: app[clock] do START, 20047060
+[106551] I/APP.FWK.INT app_watc: [clock]
+[106568] D/APP.FWK app_watc: send msg[GUI_APP_MSG_OPEN_PAGE] [0x20047060] to gui_app_mbx tick:3188.
+[106606] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_OPEN_PAGE] tick:3188
+[106635] D/APP.SCHE app_watc: app[clock] create page[root] 2004a000
+[106661] D/APP.SCHE app_watc: page[clock][root] tgt_state [CREATED] -> [RESUMED]
+[106692] D/APP.SCHE app_watc: Pause all app, and resume to clock app
+[106718] D/APP.SCHE app_watc: page[Main][root] tgt_state [RESUMED] -> [PAUSED]
+[106748] I/APP.SCHE app_watc: page[Main][root] do ONPAUSE, 2004b8f4
+[106788] I/APP.SCHE app_watc: page[clock][root] do ONSTART, 2004a000
+service_reset_time:  124:0:1 - 12:0:3 - 1
+[117963] I/APP.SCHE app_watc: page[clock][root] do ONRESUME, 2004a000
+STATE_PAUSED: clock[rotate_b] init
+app_clock_rotate_bg img_size:h:150,w:150 
+STATE_ACTIVE: clock[band] init
+STATE_ACTIVE: clock[band] resume
+watchface: rtc UNSET -> "?????????" hint shown
+calib: rtc unset at first resume -> auto opening panel
+calib: panel open, start 2024-01-01 12:00:04
+[120491] I/APP.SCHE app_watc: Try setup trans-anim
+app_anim_buf_alloc: 0x602310b0 index 0 size 351000
+[120549] I/APP.ANI app_watc: buf = 602310b0
+[120606] I/APP.ANI app_watc: app_trans_animation_obj_create = 20056cdc
+app_anim_buf_alloc: 0x601db598 index 1 size 351000
+[120657] I/APP.ANI app_watc: buf = 601db598
+[121789] I/APP.ANI app_watc: app_trans_animation_obj_create = 20056e54
+[121819] I/APP.ANI app_watc: Start free run animation
+[121877] I/APP.ANI app_watc: app_trans_animation_setup end, cost=42ms
+
+[121915] I/APP.SCHE app_watc: Trans-anim setup done.
+[121937] D/APP.SCHE app_watc: --Pause app_schedule_task--
+[121959] D/APP.SCHE app_watc: app_schedule_task done.
+[131751] I/APP.ANI app_watc: free_run_ready 0 
+
+[133531] I/APP.ANI app_watc: wait_refr_task_cb 0
+
+[133555] I/APP.ANI app_watc: anim_free_run_ready 0 
+
+[133575] I/APP.ANI app_watc: app_trans_anim_free_run_clean
+
+[133600] I/APP.ANI app_watc: app_trans_animation_obj_destroy = 20056e54
+app_anim_buf_free: 0x601db598
+[133643] I/APP.ANI app_watc: app_trans_animation_obj_destroy = 20056cdc
+app_anim_buf_free: 0x602310b0
+[133696] I/APP.SCHE app_watc: Trans-anim finish, res=0
+[133720] D/APP.SCHE app_watc: --Resume app_schedule_task--
+calib: rtc_is_unset=1  auto_shown=1  open=1
+msh />Mon Jan  1 12:00:08 2024
+msh />idle screen-off: enabled (10s)
+msh />[681839] I/APP.FWK.PM app_watc: fsm:Cur[GUI_STATE_ACTIVE],Action[GUI_PM_ACTION_SLEEP]
+[681875] I/APP.FWK.PM app_watc: change_gui_state:[GUI_STATE_ACTIVE]->[GUI_STATE_INACTIVE_PENDING]
+[681913] I/NO_TAG app_watc: no input:10025
+[681931] I/APP.FWK.PM app_watc: change_gui_state:[GUI_STATE_INACTIVE_PENDING]->[GUI_STATE_INACTIVE]
+[681967] I/APP.FWK.PM app_watc: gui_suspend
+[681986] I/drv.lcd lcd_task: Power off
+[682002] I/drv.epic lcd_task: drv_gpu closed.
+[682019] I/drv.lcd lcd_task: display off
+[682036] I/drv.lcd lcd_task: [ON] -> [OFF]
+[682053] I/drv.lcd lcd_task: HW close
+[682069] I/drv.lcd lcd_task: HW close done.
+[682085] I/drv.lcd lcd_task: Power off done
+[682107] I/TOUCH tp_off: Power off
+[682125] I/TOUCH tp_off: Power off done.
+

@@ -1,0 +1,79 @@
+# ============================================
+#  黄山派手表固件 —— git 忽略规则
+#  原则：只跟踪「自己写的、能读懂的、需要版本历史」的东西
+# ============================================
+
+# ---- 第三方源码：不进本仓库 ----
+# sifli-sdk 从 https://gitee.com/SiFli/sifli-sdk 克隆（860MB）
+# 灾难恢复时重新 clone 即可，不必上传
+/sifli-sdk/
+
+# LVGL 官方 demo 源码（104MB），非本项目代码
+watch/lvgl/lvgl_v8_demos/
+watch/lvgl/lvgl_v9_demos/
+
+# ---- 编译产物：可重新生成 ----
+*.o
+*.obj
+*.elf
+*.hex
+*.map
+*.a
+*.lib
+*.bin
+*.lst
+*.d
+.sconsign.dblite
+**/build_sf32lb52-*/
+build/
+Output/
+output/
+
+# ---- 调试日志：含设备 MAC / IP，公开仓库不可上传 ----
+# 实测：11 个日志含 MAC 地址，4 个含 IP，7 个含 token 字样
+# 这些是串口原始输出，是过程垃圾不是资产
+_*.txt
+_*.log
+_*.raw
+*.log
+_*.exit
+**/_诊断日志/
+**/__smoke_*.html
+watch/_logs/
+watch/_backup/
+watch/_merge-backup/
+**/__pycache__/
+*.pyc
+
+# 工具诊断报告（表盘生成过程输出，同属过程垃圾）
+*_diag.txt
+*_check.txt
+watch/b_ble*.txt
+watch/watchface-tools/asset_metrics.txt
+watch/watchface-tools/preview_check.txt
+
+# 注意：_ 开头的 .py/.ps1/.json 是自研工具脚本（如 _ser2048.py、_panelcheck.ps1），
+# 是有价值的资产，故不排除。
+
+# ---- 字体资源：13MB 的 ttf，可从 LVGL 官方重新获取 ----
+# 实测四个 ttf 合计约 13MB，占仓库体积的大头。
+# 如需完全自包含可删除下面四行（代价：仓库体积 +13MB）
+watch/lvgl/watch/src/resource/fonts/freetype/SourceHanSansCN-Normal.ttf
+watch/lvgl/watch/src/resource/fonts/freetype/DroidSansFallback.ttf
+watch/lvgl/watch/src/resource/fonts/freetype/tiny55_full.ttf
+watch/lvgl/watch/src/resource/fonts/freetype/tiny55_lite.ttf
+
+# 含他人设备 MAC 的蓝牙扫描结果，不公开（脱敏版在 docs/）
+watch/蓝牙通道自检结果.txt
+
+# ---- 工具与编辑器 ----
+.vscode/
+.idea/
+*.swp
+*~
+*.bak
+
+# ---- 系统文件 ----
+.DS_Store
+Thumbs.db
+desktop.ini

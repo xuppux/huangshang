@@ -1,0 +1,88 @@
+﻿msh />idle screen-off: DISABLED (kept awake)
+msh />switching to clock app...
+[73278] D/APP.FWK tshell: send msg[GUI_APP_MSG_RUN_APP] [clock] to gui_app_mbx tick:2172.
+[73314] I/APP.FWK.INT tshell: [clock]
+msh />[73893] D/APP.SCHE app_watc: ----------------app_schedule_task---------------start
+[73924] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_RUN_APP] tick:2172
+[73953] I/APP.SCHE app_watc: app[clock] do LOAD, 20047060
+[73976] I/APP.FWK app_watc: finding clock in builtin apps...
+[73999] D/APP.SCHE app_watc: app[clock] tgt_state [LAUNCHED] -> [RUNNING]
+[74028] I/APP.SCHE app_watc: app[clock] do START, 20047060
+[74051] I/APP.FWK.INT app_watc: [clock]
+[74067] D/APP.FWK app_watc: send msg[GUI_APP_MSG_OPEN_PAGE] [0x20047060] to gui_app_mbx tick:2196.
+[74106] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_OPEN_PAGE] tick:2196
+[74135] D/APP.SCHE app_watc: app[clock] create page[root] 2004a000
+[74161] D/APP.SCHE app_watc: page[clock][root] tgt_state [CREATED] -> [RESUMED]
+[74191] D/APP.SCHE app_watc: Pause all app, and resume to clock app
+[74216] D/APP.SCHE app_watc: page[Main][root] tgt_state [RESUMED] -> [PAUSED]
+[74246] I/APP.SCHE app_watc: page[Main][root] do ONPAUSE, 2004b8f4
+[74286] I/APP.SCHE app_watc: page[clock][root] do ONSTART, 2004a000
+service_reset_time:  124:0:1 - 12:0:2 - 1
+[85451] I/APP.SCHE app_watc: page[clock][root] do ONRESUME, 2004a000
+STATE_PAUSED: clock[rotate_b] init
+app_clock_rotate_bg img_size:h:150,w:150 
+STATE_ACTIVE: clock[band] init
+STATE_ACTIVE: clock[band] resume
+watchface: rtc UNSET -> "?????????" hint shown
+calib: rtc unset at first resume -> auto opening panel
+calib: panel open, start 2024-01-01 12:00:03
+[88051] I/APP.SCHE app_watc: Try setup trans-anim
+app_anim_buf_alloc: 0x602310b0 index 0 size 351000
+[88109] I/APP.ANI app_watc: buf = 602310b0
+[88167] I/APP.ANI app_watc: app_trans_animation_obj_create = 20056cdc
+app_anim_buf_alloc: 0x601db598 index 1 size 351000
+[88217] I/APP.ANI app_watc: buf = 601db598
+[89350] I/APP.ANI app_watc: app_trans_animation_obj_create = 20056e54
+[89380] I/APP.ANI app_watc: Start free run animation
+[89438] I/APP.ANI app_watc: app_trans_animation_setup end, cost=42ms
+
+[89477] I/APP.SCHE app_watc: Trans-anim setup done.
+[89498] D/APP.SCHE app_watc: --Pause app_schedule_task--
+[89521] D/APP.SCHE app_watc: app_schedule_task done.
+[100730] I/APP.ANI app_watc: free_run_ready 0 
+
+[102771] I/APP.ANI app_watc: wait_refr_task_cb 0
+
+[102794] I/APP.ANI app_watc: anim_free_run_ready 0 
+
+[102815] I/APP.ANI app_watc: app_trans_anim_free_run_clean
+
+[102839] I/APP.ANI app_watc: app_trans_animation_obj_destroy = 20056e54
+app_anim_buf_free: 0x601db598
+[102879] I/APP.ANI app_watc: app_trans_animation_obj_destroy = 20056cdc
+app_anim_buf_free: 0x602310b0
+[102931] I/APP.SCHE app_watc: Trans-anim finish, res=0
+[102954] D/APP.SCHE app_watc: --Resume app_schedule_task--
+msh />watchface: rtc set -> "?????????" hint hidden
+calib: panel open, start 2026-09-20 20:00:01
+calib: sel=0  [2026 9 20 20 0 1]  open=1
+calib: label[0] = "??? 2026"
+msh />calib: sel=1  [2026 9 20 20 0 1]  open=1
+calib: label[1] = "??? 09"
+msh />calib: sel=1  [2026 10 20 20 0 1]  open=1
+calib: label[1] = "??? 10"
+msh />calib: sel=1  [2026 9 20 20 0 1]  open=1
+calib: label[1] = "??? 09"
+msh />calib: sel=2  [2026 9 20 20 0 1]  open=1
+calib: label[2] = "??? 20"
+msh />calib: sel=2  [2026 9 19 20 0 1]  open=1
+calib: label[2] = "??? 19"
+msh />calib: sel=2  [2026 9 20 20 0 1]  open=1
+calib: label[2] = "??? 20"
+msh />calib: sel=0  [2026 9 20 20 0 1]  open=1
+calib: label[0] = "??? 2026"
+msh />calib: sel=0  [2025 9 20 20 0 1]  open=1
+calib: label[0] = "??? 2025"
+msh />calib: sel=0  [2026 9 20 20 0 1]  open=1
+calib: label[0] = "??? 2026"
+msh />calib: sel=3  [2026 9 20 20 0 1]  open=1
+calib: label[3] = "??? 20"
+msh />calib: sel=3  [2026 9 20 21 0 1]  open=1
+calib: label[3] = "??? 21"
+msh />calib: sel=3  [2026 9 20 20 0 1]  open=1
+calib: label[3] = "??? 20"
+msh />calib: applied -> rtc now 2026-09-20 20:00:01
+calib: panel closed
+msh />Sun Sep 20 20:00:02 2026
+msh />calib: rtc_is_unset=0  auto_shown=1  open=0
+msh />

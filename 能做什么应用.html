@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>黄山派手表 · 还能做什么应用</title>
+<style>
+  :root{
+    --bg:#f4f6f9;
+    --card:#ffffff;
+    --ink:#1b2430;
+    --ink2:#5b6b7c;
+    --ink3:#8d9aa8;
+    --line:#e3e8ee;
+    --blue:#2f6fed;
+    --blue-bg:#eef4ff;
+    --green:#12a05f;
+    --green-bg:#eafaf1;
+    --amber:#c17d10;
+    --amber-bg:#fff7e6;
+    --red:#d24b4b;
+    --red-bg:#fdeeee;
+    --violet:#7a4de8;
+    --violet-bg:#f2eeff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font:15px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+
+  /* ---------- header ---------- */
+  header{
+    background:linear-gradient(135deg,#eaf1ff 0%,#f3f8ff 45%,#fdf6ec 100%);
+    border-bottom:1px solid var(--line);
+    padding:38px 0 26px;
+    margin-bottom:26px;
+  }
+  header .wrap{padding-bottom:0}
+  h1{font-size:27px;margin:0 0 8px;letter-spacing:-.4px}
+  .sub{color:var(--ink2);font-size:14.5px;margin:0 0 22px;max-width:760px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+  .stat{background:rgba(255,255,255,.86);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .stat b{display:block;font-size:24px;line-height:1.25;color:var(--blue)}
+  .stat span{font-size:12.5px;color:var(--ink2)}
+  .stat.warn b{color:var(--amber)}
+  .stat.ok b{color:var(--green)}
+
+  /* ---------- section ---------- */
+  h2{font-size:20px;margin:44px 0 6px;letter-spacing:-.3px}
+  h2 .cnt{font-size:13px;color:var(--ink3);font-weight:400;margin-left:8px}
+  .lead{color:var(--ink2);font-size:14px;margin:0 0 16px;max-width:820px}
+
+  /* ---------- filter ---------- */
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0 20px}
+  .pill{
+    border:1px solid var(--line);background:#fff;color:var(--ink2);
+    padding:7px 14px;border-radius:999px;font-size:13.5px;cursor:pointer;
+    transition:.15s;
+  }
+  .pill:hover{border-color:#c9d6e6;color:var(--ink)}
+  .pill.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:500}
+  .pill .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px}
+  .spacer{flex:1}
+  .progress{font-size:13px;color:var(--ink2);white-space:nowrap}
+  .progress b{color:var(--green)}
+
+  /* ---------- groups ---------- */
+  .group{margin-bottom:22px}
+  .ghead{
+    display:flex;align-items:baseline;gap:10px;margin:26px 0 12px;
+    padding-bottom:8px;border-bottom:1px solid var(--line);
+  }
+  .ghead h3{font-size:16px;margin:0}
+  .ghead .note{font-size:12.5px;color:var(--ink3)}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:14px 15px 13px;position:relative;transition:.16s;
+  }
+  .card:hover{border-color:#cddcee;box-shadow:0 3px 14px rgba(31,66,120,.07)}
+  .card.done{background:#f9fdfb;border-color:#bfe6d0}
+  .card.done .name{color:var(--green)}
+  .card.done .name::after{content:" ✓";font-weight:700}
+
+  .top{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px}
+  .name{font-weight:600;font-size:15px;flex:1;letter-spacing:-.1px}
+  .stars{font-size:11px;color:var(--amber);letter-spacing:1px;white-space:nowrap;padding-top:3px}
+  .mark{
+    position:absolute;right:11px;bottom:10px;
+    width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line);
+    background:#fff;cursor:pointer;padding:0;line-height:1;
+    color:transparent;font-size:12px;transition:.15s;
+  }
+  .mark:hover{border-color:var(--green);color:#cfe8da}
+  .card.done .mark{background:var(--green);border-color:var(--green);color:#fff}
+
+  .hw{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+  .tag{
+    font-size:11.5px;padding:2px 8px;border-radius:6px;
+    background:#f1f5fa;color:var(--ink2);border:1px solid #e6edf5;
+  }
+  .tag.hw{background:var(--violet-bg);color:var(--violet);border-color:#e4dbff}
+  .tip{font-size:13px;color:var(--ink2);margin:0 0 8px}
+  .gate{
+    font-family:ui-monospace,Consolas,monospace;font-size:11.5px;line-height:1.7;
+    background:#f7f9fc;border:1px solid var(--line);border-radius:8px;
+    padding:7px 10px;color:#3c4a5a;margin-bottom:7px;white-space:pre-wrap;word-break:break-all;
+  }
+  .gate .k{color:var(--blue)}
+  .ref{font-size:11.5px;color:var(--ink3);padding-right:30px}
+  .ref code{background:#f1f5fa;padding:1px 5px;border-radius:4px;font-size:11px;color:var(--ink2)}
+
+  /* ---------- xiaozhi ---------- */
+  .xz{
+    background:#fff;border:1px solid #dbe6f5;border-radius:16px;
+    padding:24px 24px 20px;margin-top:14px;
+    box-shadow:0 4px 22px rgba(47,111,237,.06);
+  }
+  .verdict{
+    background:var(--green-bg);border-left:4px solid var(--green);
+    border-radius:0 10px 10px 0;padding:13px 16px;margin:16px 0 20px;font-size:14.5px;
+  }
+  .verdict b{color:var(--green)}
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-bottom:24px}
+  .fact{background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:13px}
+  .fact b{display:block;font-size:12px;color:var(--ink3);font-weight:600;margin-bottom:3px;letter-spacing:.3px}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin:8px 0 6px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;color:var(--ink2);background:#f7f9fc;font-weight:600;white-space:nowrap}
+  tr.rec td{background:#f4fbf7}
+  td.rec{color:var(--green);font-weight:600;white-space:nowrap}
+  .lv{white-space:nowrap;font-size:12px;color:var(--amber);letter-spacing:.5px}
+
+  h4{font-size:15px;margin:26px 0 8px}
+  ol,ul{padding-left:22px;margin:8px 0}
+  li{margin:4px 0;font-size:14px;color:#2a3644}
+  .code{
+    font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.75;
+    background:#1e2530;color:#d8e2f0;border-radius:10px;padding:13px 15px;
+    overflow-x:auto;white-space:pre;margin:10px 0;
+  }
+  .code .c{color:#7d8fa6}
+  .code .k{color:#7cc4ff}
+  .code .s{color:#9ee6a8}
+  .warnbox{
+    background:var(--amber-bg);border-left:4px solid var(--amber);
+    border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0;font-size:13.5px;
+  }
+  .dangerbox{
+    background:var(--red-bg);border-left:4px solid var(--red);
+    border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0;font-size:13.5px;
+  }
+  .warnbox b,.dangerbox b{display:block;margin-bottom:3px}
+
+  /* ---------- start ---------- */
+  .start{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;margin-top:14px}
+  .step{background:#fff;border:1px solid var(--line);border-radius:12px;padding:17px 18px}
+  .step .no{
+    display:inline-flex;width:24px;height:24px;border-radius:7px;background:var(--blue-bg);
+    color:var(--blue);font-size:13px;font-weight:700;align-items:center;justify-content:center;margin-bottom:9px;
+  }
+  .step h5{margin:0 0 6px;font-size:15px}
+  .step p{margin:0;font-size:13px;color:var(--ink2)}
+  .step .why{font-size:12.5px;color:var(--ink3);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+
+  footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink3)}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>黄山派手表 · 还能做什么应用</h1>
+    <p class="sub">
+      全部按<b>板上实际有的东西</b>列，不是设想。每条都标了要打开哪个开关、去哪抄现成代码。
+      点右上角圆圈可以标记「我要做这个」，进度存在本机。
+    </p>
+    <div class="stats" id="stats"></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <h2>应用清单 <span class="cnt" id="listCnt"></span></h2>
+  <p class="lead">
+    难度 <b>★</b> 一个晚上能出效果 · <b>★★</b> 要调几天 · <b>★★★</b> 一周以上 · <b>★★★★</b> 当成项目做。
+    灰底那行是「要动什么」——照抄进 <code>proj.conf</code> 就行，改完要重新编译烧录。
+  </p>
+
+  <div class="filters" id="filters">
+    <button class="pill on" data-f="all">全部</button>
+    <button class="pill" data-f="soft"><span class="dot" style="background:#2f6fed"></span>纯写代码</button>
+    <button class="pill" data-f="ready"><span class="dot" style="background:#12a05f"></span>有现成例程</button>
+    <button class="pill" data-f="ext"><span class="dot" style="background:#c17d10"></span>要接外设</button>
+    <button class="pill" data-f="no"><span class="dot" style="background:#d24b4b"></span>板子没有</button>
+    <span class="spacer"></span>
+    <span class="progress">已标记 <b id="doneN">0</b> 项</span>
+  </div>
+
+  <div id="groups"></div>
+
+  <!-- ======================= 小智 ======================= -->
+  <h2>小智 AI 能不能装进来</h2>
+  <p class="lead">能，但「放进去」有三种完全不同的意思，难度差了 100 倍。下面把三条路都摊开。</p>
+
+  <div class="xz">
+    <div class="verdict">
+      <b>先给结论：</b>小智在黄山派上是<b>官方支持的现成固件</b>（虾哥的 <code>78/xiaozhi-sf32</code> 支持硬件列表里就有立创黄山派）。
+      但它是一套<b>整机固件</b>，不是一个能被蜂窝列表加载的 app。
+      所以「当一格图标点进去」这件事，需要你把它的能力<b>移植</b>进手表工程，而不是「安装」。
+    </div>
+
+    <div class="facts">
+      <div class="fact"><b>怎么联网</b>蓝牙 PAN —— 手机开「蓝牙网络共享」当网关。<b>不需要 WiFi 模块</b>，这块板子也没有 WiFi。</div>
+      <div class="fact"><b>手机要求</b>需要<b>安卓</b>手机。iPhone 不给第三方设备共享蓝牙网络，这条路 iOS 走不通。</div>
+      <div class="fact"><b>要装什么</b>一个小喇叭接到板上的 Speaker 座（板载 3W 功放），麦克风板子自带了。</div>
+      <div class="fact"><b>服务器</b>连 <code>xiaozhi.me</code>，手机号登录后在控制台绑设备码。</div>
+    </div>
+
+    <h4>三条路对比</h4>
+    <table>
+      <thead>
+        <tr><th>做法</th><th>最后是什么样</th><th>工作量</th><th>风险</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>A · 整体换掉</b></td>
+          <td>烧官方小智固件，板子变成一个小智音箱（带屏）。<b>手表功能全部没有了</b></td>
+          <td class="lv">一个下午</td>
+          <td>低，烧回来就行</td>
+        </tr>
+        <tr class="rec">
+          <td><b>B · 移植成一个 app</b> <span style="color:var(--green);font-size:12px">← 真·「放进蜂窝」</span></td>
+          <td>蜂窝里多一格「AI 对话」，点开说话，退出回表盘。手表功能都还在</td>
+          <td class="lv">★★★★ 大工程</td>
+          <td>中：音频、内存、蓝牙要和现有功能抢资源</td>
+        </tr>
+        <tr>
+          <td><b>C · 手机当网关</b></td>
+          <td>手表只负责录音+放音，识别和大模型跑在手机 App 里</td>
+          <td class="lv">★★★</td>
+          <td>中：要自己写手机端</td>
+        </tr>
+        <tr>
+          <td><b>D · 装两份固件来回切</b></td>
+          <td>开机时选「手表」还是「小智」</td>
+          <td class="lv">★★★★</td>
+          <td><b>高</b>：要改分区表和引导程序，不建议新手碰</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4>路径 A · 只想先看看小智长什么样（推荐先做这个）</h4>
+    <ol>
+      <li>把小喇叭接到板上的 Speaker 座。</li>
+      <li><b>先备份现在的固件</b>（这步别省）：把 <code>build_sf32lb52-lchspi-ulp_hcpu\main.bin</code> 复制成 <code>main.backup.bin</code> 存到别处。</li>
+      <li>从 <code>github.com/78/xiaozhi-sf32/releases</code> 下最新固件压缩包，里面有 5 个 bin。</li>
+      <li>用 <code>sftool</code> 按官方给的地址烧进去（bootloader / ftab / ER_IROM1~3）。</li>
+      <li>手机开「蓝牙网络共享」→ 蓝牙里连上 <code>sifli-pan</code> → 按对话键 → 手机浏览器打开 xiaozhi.me 绑设备。</li>
+      <li>想回到手表：直接跑 <code>watch\flash.ps1</code> 把备份的 main.bin 烧回来。</li>
+    </ol>
+    <div class="warnbox">
+      <b>备份为什么重要</b>
+      小智固件自带自己的分区表（ftab），烧进去会覆盖现在的。所以除了 main.bin，稳妥起见也把当前的 ftab 读出来存一份
+      （<code>sftool read_flash 0x12000000 0x8000 ftab.backup.bin</code>，具体参数以 <code>sftool --help</code> 为准）。
+      这样万一恢复时起不来，两样都能按原样烧回去。
+    </div>
+
+    <h4>路径 B · 想真的做成蜂窝里的一格</h4>
+    <p class="lead" style="margin-bottom:6px">
+      好消息是：小智要用的<b>每一块料，SDK 里都已经有了</b>，不用你自己啃协议栈。
+    </p>
+    <table>
+      <thead><tr><th>小智需要的能力</th><th>SDK 里现成的东西</th></tr></thead>
+      <tbody>
+        <tr><td>通过蓝牙上网</td><td><code>middleware/bluetooth/porting/rtt/bt_pan/</code> —— 已经做成一张 lwip 网卡，连上就能拿到 IP</td></tr>
+        <tr><td>TCP/IP 协议栈</td><td><code>rtos/rtthread/components/net/lwip</code></td></tr>
+        <tr><td>语音编解码 Opus</td><td><code>external/opus-1.4/</code> —— 完整源码，而且 <code>middleware/acpu_ctrl/</code> 里已经按小智的参数（16kbps、20ms 帧、语音模式）配好了</td></tr>
+        <tr><td>录音 + 播放</td><td><code>middleware/audio/audio_manager</code>，示例在 <code>example/multimedia/audio/record</code></td></tr>
+        <tr><td>回声消除（不然喇叭的声音会被自己听进去）</td><td><code>external/WebRTC_audio_processing</code></td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:14px;margin-top:14px">要补的开关（都在 <code>proj.conf</code>）：</p>
+    <div class="code"><span class="c"># 蓝牙上网</span>
+<span class="k">CONFIG_CFG_PAN</span>=y
+<span class="k">CONFIG_BT_FINSH_PAN</span>=y
+<span class="c"># 音频链路</span>
+<span class="k">CONFIG_AUDIO_USING_MANAGER</span>=y
+<span class="c"># 网络（lwip + DHCP 客户端）</span>
+<span class="k">CONFIG_RT_USING_LWIP</span>=y</div>
+    <p style="font-size:14px;margin-top:16px"><b>真正的四个坑</b>，提前知道能省几周：</p>
+    <ol>
+      <li><b>WebSocket 得自己写。</b>SDK 只有 HTTP 客户端（<code>external/webclient</code>），没有 WebSocket。要么自己实现握手+分帧（大约几百行），要么改成 MQTT/UDP 那套协议。</li>
+      <li><b>蓝牙要共存。</b>现在的校时用的是 BLE，小智用的是经典蓝牙 PAN。芯片支持双模同时跑，但连接管理要重新理一遍，否则两个功能会互相踢。</li>
+      <li><b>内存要重算。</b>音频缓冲 + 网络缓冲都吃内存。Flash 够用（现在 2.5MB，main 分区有 8MB），但 PSRAM/SRAM 得实际算一遍。</li>
+      <li><b>手机必须是安卓</b>，而且用户得知道去开「蓝牙网络共享」——这个入口藏得比较深，最好在手表屏幕上给出提示。</li>
+    </ol>
+
+    <div class="dangerbox">
+      <b>我的建议</b>
+      先用路径 A 花一个下午把官方小智烧进去玩一玩，亲身体会一下「延迟、音质、联网稳定性」到底什么样。
+      玩过之后再决定要不要走 B —— 因为 B 是个大工程，而 A 的成本几乎为零，先花小钱判断值不值得。
+      另外路线 B 有个更划算的中间态：<b>先把「录音 10 秒 + 回放」接通</b>（SDK 有现成例子），
+      这一步做完，你就有了语音功能的地基，界面反而最好补。
+    </div>
+  </div>
+
+  <!-- ======================= 从哪开始 ======================= -->
+  <h2>如果不知道从哪下手，先做这三个</h2>
+  <p class="lead">这三个的共同点：板上硬件全都在、SDK 里全都有现成代码、做完了立刻能看见效果，而且彼此不打架。</p>
+  <div class="start">
+    <div class="step">
+      <span class="no">1</span>
+      <h5>状态栏显示电池电量</h5>
+      <p>现在屏幕右上角是空的，连电池图标都没有 —— 这是拿电池供电的表最该有、却最缺的一块。</p>
+      <div class="why">ADC 的 CH7 已经内部接到了电池正极（不用外接分压电阻），先加 <code>CONFIG_BSP_USING_ADC1=y</code>，照 <code>adc</code> 例程读 <code>bat1</code> 就行。</div>
+    </div>
+    <div class="step">
+      <span class="no">2</span>
+      <h5>抬腕亮屏</h5>
+      <p>把手抬起来看时间，屏幕自动亮 —— 这是「手表感」最强的一个功能，比任何新界面都值。</p>
+      <div class="why">加速度计（LSM6DS3TR-C）走 I2C3（PA39/PA40），打开 <code>CONFIG_BSP_USING_I2C3=y</code> 后照 <code>RT-Device/sensor</code> 例程读角度，再调现成的 <code>app_watch_set_brightness()</code>。</div>
+    </div>
+    <div class="step">
+      <span class="no">3</span>
+      <h5>计步器</h5>
+      <p>今天走了多少步。做出来直接就是蜂窝里的一格。</p>
+      <div class="why">比想象的简单：LSM6DSL 驱动<b>自带计步算法</b>，设备名 <code>step_lsm</code>，读一次就是步数，算法完全不用自己写。</div>
+    </div>
+  </div>
+
+  <footer>
+    依据：<code>rtconfig.h</code>（当前固件实际开关）+ <code>board.conf</code>（板级器件）+ 立创官方规格 + SDK 源码树实际文件。
+    整理于 2026-09-21，对应固件 main.bin 2,514,740 字节那一版；<b>2026-09-23 更新到 2,568,732 字节</b>那一版。
+    <br>
+    <b>已经做掉的：</b>计算器（删掉卡片左上角返回键、算式行加宽 254 → 334）、
+    手电筒（进 app 默认常亮，轻触循环 关 → 常亮 → 5Hz 频闪，屏幕全白 + 背光 100%，
+    1s 定时器顶住自动息屏）、
+    <b>2048</b>（四方向共用一段合并逻辑、一步撤销、防息屏、11 条串口自检命令；
+    浏览器可玩版在 <code>watch/ui-preview/game2048.html</code>；
+    09-23 连做两轮真机返工：① 去掉底部「第 N 步」那行、修掉分数面板里汉字标题压数字
+    （根因是 label 占的高度是<b>行高</b>不是字号：16px 的 label 实际 25px 高）；
+    ② 按反馈删掉左上角「2048」标题、两个分数/最佳面板<b>整体顶部居中</b>，
+    并把棋盘位置改成由信息条算出来（<code>BOARD_Y = TOP_Y + PANEL_H + BAND_GAP</code>），
+    面板底和棋盘顶之间留出 <b>6px</b> 的缝 —— 之前是 <b>0px</b>，两个同色方块贴在一起
+    看着就像压在棋盘上）。
+    蜂窝里实际显示 <b>6 格</b>（串口敲 <code>calc_menu</code> 可复核：calculator / clock /
+    game2048 / hello_world / rotation3d / torch），离 16×16 的上限还早得很 ——
+    所以「加不下」从来不是理由。
+  </footer>
+</div>
+
+<script>
+/* flag: soft=纯写代码 ready=有现成例程 ext=要接外设 no=板子没有 */
+const GROUPS = [
+  {
+    name:"传感器与体感",
+    note:"三个传感器都挂在 I2C3（PA39=SDA / PA40=SCL），驱动和例程都是现成的",
+    apps:[
+      {n:"计步器",      f:"ready", d:1, hw:["IMU","I2C3"], gate:"CONFIG_BSP_USING_I2C3=y\nCONFIG_SENSOR_USING_6D=y\nCONFIG_ACC_USING_LSM6DSL=y", ref:"RT-Device/sensor · 设备名 step_lsm", tip:"驱动自带计步算法，读一次就是步数。想做「今天走了多少」这一步就够了"},
+      {n:"指南针 / 指北针", f:"ready", d:2, hw:["地磁 MMC5603"], gate:"CONFIG_SENSOR_USING_MAG=y\nCONFIG_MAG_USING_MMC56X3=y", ref:"RT-Device/sensor · 设备名 mag_mmc56x3", tip:"难点不在读数据，在「校准」——手表转个 8 字要能自己修正，否则指针会偏"},
+      {n:"抬腕亮屏",    f:"ready", d:2, hw:["IMU"], gate:"同计步器那几个开关", ref:"RT-Device/sensor + 现成的 app_watch_set_brightness()", tip:"判断「手腕抬起且屏幕朝向自己」再点亮。这是手表最该有的功能，强烈建议优先做"},
+      {n:"翻转手腕息屏 / 静音", f:"ready", d:2, hw:["IMU"], gate:"同上", ref:"RT-Device/sensor", tip:"来电或者闹钟响的时候翻腕静音，逻辑和抬腕亮屏是一套东西"},
+      {n:"自动亮度",    f:"ready", d:2, hw:["环境光 LTR303","背光 PWM"], gate:"CONFIG_SENSOR_USING_ASL=y\nCONFIG_ASL_USING_LTR303=y", ref:"RT-Device/sensor · 设备名 li_ltr303", tip:"走到外面屏幕自己变亮。背光接口已经做好了，把光感读数接上去就行"},
+      {n:"摇一摇手电筒", f:"soft", d:1, hw:["屏幕","IMU"], gate:"无（亮度功能已有）", ref:"app_watch_set_brightness()", tip:"屏幕全白 + 最亮当作帽子上的灯。摇一下开关，很有用的小功能"},
+      {n:"摇一摇换表盘", f:"soft", d:1, hw:["IMU"], gate:"同上", ref:"app_clock_main.c 的表盘注册列表", tip:"甩一下手腕换一个表盘，比进菜单点方便"},
+      {n:"双击唤醒屏幕", f:"ready", d:2, hw:["IMU"], gate:"同计步器", ref:"RT-Device/sensor", tip:"敲两下屏幕边框就亮屏。只靠加速度计就能做，不需要额外的触摸唤醒功能"},
+      {n:"久坐提醒 / 活动提醒", f:"ready", d:3, hw:["IMU"], gate:"同计步器", ref:"RT-Device/sensor", tip:"连续一小时没动就提醒。难点是耗电：要低频率采样，不然待机时间会掉"},
+      {n:"电子水平仪",  f:"ready", d:3, hw:["IMU","地磁"], gate:"计步器 + 指南针的开关", ref:"RT-Device/sensor", tip:"IMU 测倾角、地磁测朝向，两个传感器一起用，是练手数据融合的好题目"},
+      {n:"睡眠监测",    f:"ready", d:3, hw:["IMU"], gate:"同计步器", ref:"RT-Device/sensor", tip:"整晚采样加速度判断深浅睡。数据要存到 Flash，否则拔电就丢"},
+    ]
+  },
+  {
+    name:"电源与硬件状态",
+    note:"电池、充电、温度 —— 现在这些信息在界面上一个都没有",
+    apps:[
+      {n:"电池电量百分比", f:"ready", d:1, hw:["ADC CH7"], gate:"CONFIG_BSP_USING_ADC1=y", ref:"adc 例程 · 设备名 bat1，读 CH7", tip:"CH7 在芯片内部已经接到电池正极了，不用你在外面焊分压电阻。读出来是 mV，换算成百分比即可"},
+      {n:"充电状态与充电图标", f:"ready", d:2, hw:["充电 IC AW32001"], gate:"CONFIG_BSP_USING_CHARGER=y", ref:"customer/peripherals/charger/", tip:"充电 IC 在 I2C2、地址 0x49，驱动 SDK 里有。插上充电线状态栏显示闪电"},
+      {n:"低电量提醒",  f:"ready", d:1, hw:["ADC"], gate:"同电量", ref:"adc 例程", tip:"低于 15% 弹一次提示、震动（如果接了马达）。纯逻辑，半小时的事"},
+      {n:"省电模式开关", f:"soft", d:1, hw:["背光","PM 框架"], gate:"无（PM 已经开了）", ref:"app_clock_status_bar.c 的亮度按钮", tip:"一键把亮度降到最低、关掉广播、缩短息屏时间"},
+      {n:"电量曲线 / 用了多久", f:"ready", d:2, hw:["ADC","Flash"], gate:"同电量", ref:"FlashDB 已经在用（存蓝牙配对的那个）", tip:"每小时记一次电压，画一条曲线。顺便能看出电池是不是虚标"},
+    ]
+  },
+  {
+    name:"时间与工具",
+    note:"屏幕、触摸、RTC 都在手，这类几乎全是纯软件，最适合拿来练 LVGL",
+    apps:[
+      {n:"秒表",       f:"soft", d:1, hw:["屏幕"], gate:"无", ref:"LVGL 的 lv_label + 定时器", tip:"最经典的入门练习：一个开始/暂停按钮 + 一圈计次"},
+      {n:"倒计时 / 计时器", f:"soft", d:1, hw:["屏幕"], gate:"无", ref:"LVGL", tip:"煮面、敷面膜用。到时间响铃需要音频开关"},
+      {n:"番茄钟",      f:"soft", d:1, hw:["屏幕"], gate:"无", ref:"LVGL", tip:"25 分钟专注 + 5 分钟休息，和倒计时是同一套代码"},
+      {n:"闹钟（真闹钟）", f:"ready", d:3, hw:["RTC","PM 框架"], gate:"PM 和 RTC 都已经开好了", ref:"pm 例程 · RT_USING_PM 已启用", tip:"难点是「息屏状态下到点要能自己醒过来」，需要用到 RTC 唤醒，这是整套里最考验功底的一个"},
+      {n:"日历 / 月历",  f:"soft", d:1, hw:["触摸"], gate:"无（LVGL 日历组件已经编进去了）", ref:"rtconfig.h 里 LV_USE_CALENDAR=1", tip:"LVGL 自带日历控件，已经编进固件了，直接摆上去改配色就行"},
+      {n:"世界时钟",    f:"soft", d:1, hw:["屏幕"], gate:"无", ref:"现有表盘代码", tip:"出国出差看几个城市的当地时间，纯算时差"},
+      {n:"计算器",      f:"soft", d:2, hw:["触摸"], gate:"无", ref:"LVGL btnmatrix（上划面板那个已经用过了）", tip:"界面好写，麻烦的是算表达式（要处理优先级），不过几百行搞定"},
+      {n:"单位换算",    f:"soft", d:1, hw:["触摸"], gate:"无", ref:"LVGL", tip:"英寸/毫米、摄氏/华氏，做硬件的天天用"},
+    ]
+  },
+  {
+    name:"声音（喇叭要自己接一个）",
+    note:"音频通路是完整的：片内 CODEC + 3W 功放都已编进固件。唯一缺的是一个物理喇叭，接到板上的 Speaker 座即可",
+    apps:[
+      {n:"提示音 / 按键音", f:"soft", d:1, hw:["CODEC","功放 PA42"], gate:"音频都已编译进去，加播放调用即可", ref:"middleware/audio/audio_manager", tip:"点一下响一声。这是验证「板子真的能出声」的最小实验，建议先做这个再做大功能"},
+      {n:"闹钟铃声（语音播报）", f:"soft", d:2, hw:["喇叭"], gate:"无新增", ref:"audio_manager", tip:"到点不是滴滴响，而是一句话：「该吃药了」。比铃声实用得多"},
+      {n:"录音笔",      f:"ready", d:3, hw:["麦克风","TF 卡"], gate:"CONFIG_AUDIO_USING_MANAGER=y", ref:"example/multimedia/audio/record", tip:"SDK 里有现成的「录 10 秒再自动播」例子，先跑通它，再改成录到 TF 卡"},
+      {n:"语音备忘录（列表）", f:"ready", d:3, hw:["麦克风","TF 卡"], gate:"同录音笔", ref:"record 例程 + DFS 文件系统（已开）", tip:"录音笔 + 一个文件列表界面。这是路线 B（语音助手）的地基，做完成功率很高"},
+      {n:"音乐播放器",  f:"ready", d:3, hw:["喇叭","TF 卡"], gate:"AUDIO_USING_MANAGER + FAT（已开）", ref:"example/multimedia/audio/local_music", tip:"SDK 里连解码和播放列表都有例子。要注意 TF 卡用 SPI，和显示共用总线时别打架"},
+      {n:"纯音乐 / 白噪音助眠", f:"soft", d:2, hw:["喇叭"], gate:"无新增", ref:"audio_manager", tip:"放几段 30 秒的循环音频到 Flash，戴上耳机或小声外放"},
+      {n:"语音助手（小智）", f:"ext", d:4, hw:["麦克风","喇叭","蓝牙 PAN"], gate:"CFG_PAN + BT_FINSH_PAN + AUDIO_USING_MANAGER + lwip", ref:"见上方「小智 AI」专区", tip:"大工程，但 SDK 里每一块料都有。想清楚再开工"},
+    ]
+  },
+  {
+    name:"灯光",
+    note:"板上有颗 RGB 灯（WS2812B），引脚 PA32，SDK 已封装成 rgbled 设备",
+    apps:[
+      {n:"RGB 氛围灯",  f:"ready", d:1, hw:["WS2812 PA32"], gate:"CONFIG_BSP_PWM3_UPDATE_USING_DMA=y   ← ⚠ 必须是 UPDATE，不是 CC1\nCONFIG_RGB_SK6812MINI_HS_ENABLE=y\nCONFIG_RGB_USING_SK6812MINI_HS_DEV_NAME=y\nCONFIG_RGB_USING_SK6812MINI_HS_PWM_DEV_NAME=\"pwm3\"\nCONFIG_BSP_USING_RGBLED_CH=1\n另需：每次点亮前先 HAL_PMU_ConfigPeriLdo(PMU_PERI_LDO3_3V3,true,true) 给灯供电,\n并把 PA32 重新映射成 GPTIM2_CH1", ref:"ws2812 例程 + example/rt_device/rgb_led", tip:"呼吸灯、彩虹循环。⚠ 那个 DMA 宏名写错了不会报错、串口还全绿，灯就是不亮 —— 我为此查了两轮，务必照抄 UPDATE"},
+      {n:"通知闪烁灯",  f:"ready", d:1, hw:["WS2812"], gate:"同氛围灯", ref:"ws2812 例程", tip:"有未读消息/闹钟没关时呼吸蓝光，眼睛瞄一眼就知道"},
+      {n:"手电筒（调色）", f:"soft", d:1, hw:["屏幕","WS2812"], gate:"无", ref:"app_watch_set_brightness()", tip:"屏幕调成暖黄光，晚上不刺眼"},
+      {n:"摩斯电码发报机", f:"soft", d:2, hw:["灯","喇叭"], gate:"无", ref:"LVGL + rgbled", tip:"点屏幕输入 `.` 和 `-`，灯闪 + 响。有意思的小玩具，也能练逻辑"},
+    ]
+  },
+  {
+    name:"游戏（屏幕、触摸、IMU 全都在）",
+    note:"390×450 的 AMOLED 加 120Hz 触摸，做小游戏体验很好。而且 EPIC 2D 加速器已经启用了",
+    apps:[
+      {n:"打地鼠",      f:"soft", d:2, hw:["触摸"], gate:"无", ref:"LVGL", tip:"练手首选：定时器 + 点击判定，没有复杂逻辑"},
+      {n:"2048",       f:"soft", d:3, hw:["触摸"], gate:"无", ref:"LVGL", tip:"滑动合并算法值得写一遍，写完对「手势识别」就有感觉了"},
+      {n:"掷骰子 / 抛硬币", f:"soft", d:1, hw:["触摸","IMU"], gate:"无", ref:"LVGL", tip:"摇一摇出结果，需要读加速度计"},
+      {n:"贪吃蛇 / 俄罗斯方块", f:"soft", d:3, hw:["触摸"], gate:"无", ref:"LVGL canvas", tip:"经典款。屏幕上格子够，方块尺寸自己算"},
+      {n:"体感小游戏（用陀螺仪控制）", f:"ready", d:3, hw:["陀螺仪"], gate:"同计步器", ref:"RT-Device/sensor", tip:"转手腕控制小球滚迷宫。陀螺仪的数据噪音要处理，这是难点"},
+    ]
+  },
+  {
+    name:"蓝牙与连接",
+    note:"BLE 校时已经在跑了，说明协议栈是通的，剩下的只是接入什么服务",
+    apps:[
+      {n:"蓝牙校时（已实现）", f:"soft", d:1, hw:["BLE"], gate:"已开", ref:"ble_app.c", tip:"已经做完了。想扩展可以让它同时下发天气、日程"},
+      {n:"找手机 / 找手表", f:"soft", d:2, hw:["BLE","喇叭"], gate:"无新增", ref:"ble_app.c", tip:"手表响一下帮你找手机，手机响一下帮你找手表。双向都要写"},
+      {n:"自拍遥控 / PPT 翻页", f:"ready", d:2, hw:["经典蓝牙 HID"], gate:"需要打开 HID 相关配置", ref:"middleware/bluetooth/include/hid_api.h（带鼠标测试代码）", tip:"把手表当蓝牙键盘/鼠标，按一下就翻页。SDK 里 HID 的设备端代码是现成的"},
+      {n:"手机通知同步 / 来电提醒", f:"soft", d:4, hw:["BLE","手机端"], gate:"无（协议要自己定）", ref:"ble_app.c", tip:"工作量的大头在手机端 App，不在手表。做好心理准备再开工"},
+      {n:"设备信息页",  f:"soft", d:1, hw:["屏幕"], gate:"无", ref:"ble_app.c 里的广播名 / 现有 WiFi 无关", tip:"显示固件版本、蓝牙 MAC、剩余内存。自己调试时最常用的一个页面"},
+      {n:"蓝牙遥控电脑（当遥控器）", f:"ready", d:3, hw:["HID"], gate:"同自拍遥控", ref:"hid_api.h", tip:"电视、电脑媒体控制，走经典蓝牙 HID"},
+    ]
+  },
+  {
+    name:"存储与数据（要插一张 TF 卡）",
+    note:"板上有 SPI 的 TF 卡座，带插卡检测。文件系统是 FAT，已经编进固件了",
+    apps:[
+      {n:"表盘自定义 / 表盘管理器", f:"soft", d:3, hw:["Flash","TF 卡"], gate:"文件系统已开", ref:"app_clock_main.c 的表盘注册列表", tip:"把背景图放卡里、界面上选一个换上。做完这个，表盘就再也不用来回编译烧录了"},
+      {n:"电子书阅读器", f:"soft", d:3, hw:["TF 卡"], gate:"文件系统已开", ref:"DFS + FAT", tip:"读 txt 逐页显示，记阅读进度。中文字体已经有了（表盘在用）"},
+      {n:"文件管理器",  f:"soft", d:3, hw:["TF 卡"], gate:"文件系统已开", ref:"DFS API", tip:"列目录、看容量、删文件。数据存哪儿不迷路的前提"},
+      {n:"传感器数据记录（导出 CSV）", f:"ready", d:2, hw:["IMU","TF 卡"], gate:"传感器 + 文件系统", ref:"RT-Device/sensor + DFS", tip:"把 IMU 原始数据写进 CSV，拿到电脑上画图分析。做产品验证时非常有用"},
+    ]
+  },
+  {
+    name:"系统",
+    note:"这些是「工程完整度」，做了会让整个东西像一件成品",
+    apps:[
+      {n:"设置页",      f:"soft", d:1, hw:["触摸"], gate:"无", ref:"参考上划面板的 btnmatrix 写法", tip:"亮度、息屏时间、时间格式、语言，归到一页里。现在这些散落在各处"},
+      {n:"开机动画 / 关机动画", f:"soft", d:1, hw:["屏幕"], gate:"无", ref:"watch_demo.c 的启动流程", tip:"LOGO + 淡入。开机那几秒别让人干等"},
+      {n:"关于页 + 诊断", f:"soft", d:1, hw:["屏幕"], gate:"无", ref:"现有串口命令", tip:"把 bootcheck 里那些自检信息搬到屏幕上，不插电脑也能看状态"},
+      {n:"出厂重置",    f:"soft", d:2, hw:["Flash"], gate:"无", ref:"FlashDB + FAL 分区表", tip:"清掉蓝牙配对、设置、记录。记得要二次确认"},
+      {n:"表盘多了以后的分页", f:"soft", d:2, hw:["屏幕"], gate:"无", ref:"app_clock_main.c 已处理单表盘的情况", tip:"现在只剩一个表盘、横滑被关掉了；表盘再变多要把翻页和指示点加回来"},
+    ]
+  },
+  {
+    name:"板子没有的 —— 别在这上面花时间",
+    note:"这些不是「没写代码」，是「没有那个器件」。想要就得自己外接",
+    apps:[
+      {n:"心率 / 血氧",  f:"no", d:4, hw:["无 PPG 传感器"], gate:"SDK 里驱动是有的（几个型号），但板上没有这个器件", ref:"customer/peripherals/sensor/ 下有多个心率驱动", tip:"要外接一颗 MAX30102 之类走 I2C。注意：板上有 LDO 和预留位，但芯片本身没有"},
+      {n:"GPS 定位 / 轨迹", f:"no", d:4, hw:["无 GPS 模块"], gate:"SDK 有 AG3335M / UC6226 两套驱动，可外挂", ref:"customer/peripherals/gps/", tip:"30Pin 扩展排针上应该能接。功耗是个大问题，会显著缩短续航"},
+      {n:"WiFi 联网",   f:"no", d:4, hw:["芯片没有 WiFi"], gate:"无", ref:"——", tip:"这块芯片是纯蓝牙（双模 5.3）。要联网就用蓝牙 PAN 借手机的网，别想着加 WiFi"},
+      {n:"NFC 刷卡 / 门禁", f:"no", d:4, hw:["无 NFC"], gate:"无", ref:"——", tip:"完全没有。要做得外挂模块，还要考虑天线布置"},
+      {n:"震动提醒（真正会震）", f:"no", d:2, hw:["有驱动电路，无马达"], gate:"马达驱动电路和焊点在板上", ref:"customer/peripherals/motor/ · vibrator/", tip:"驱动代码是现成的，但马达本体要自己焊一个上去。是最便宜的「能加就加」项"},
+    ]
+  }
+];
+
+const FLAGS = {soft:"纯写代码", ready:"有现成例程", ext:"要接外设", no:"板子没有"};
+const KEY = "hsp-watch-apps-done";
+let done = new Set(JSON.parse(localStorage.getItem(KEY) || "[]"));
+let filter = "all";
+
+function stars(n){ return "★".repeat(n); }
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* 代码块：把 =y 和注释上点颜色 */
+function gateHtml(g){
+  return esc(g).split("\n").map(l=>{
+    if (l.trim().startsWith("#")) return '<span class="c">'+l+'</span>';
+    return l.replace(/(CONFIG_[A-Z0-9_]+)/g,'<span class="k">$1</span>');
+  }).join("\n");
+}
+
+function render(){
+  const host = document.getElementById("groups");
+  host.innerHTML = "";
+  let shown = 0;
+
+  GROUPS.forEach(g=>{
+    const list = g.apps.filter(a => filter === "all" || a.f === filter);
+    if (!list.length) return;
+
+    const sec = document.createElement("section");
+    sec.className = "group";
+    sec.innerHTML =
+      '<div class="ghead"><h3>'+esc(g.name)+'</h3>'+
+      '<span class="note">'+esc(g.note)+'</span></div>'+
+      '<div class="grid">'+ list.map(a=>{
+        const id = a.n;
+        const on = done.has(id);
+        return '<div class="card'+(on?' done':'')+'" data-id="'+esc(id)+'">'+
+          '<div class="top"><span class="name">'+esc(a.n)+'</span>'+
+          '<span class="stars">'+stars(a.d)+'</span></div>'+
+          '<div class="hw">'+
+            '<span class="tag" style="background:#eef4ff;color:#2f6fed;border-color:#dbe6fb">'+FLAGS[a.f]+'</span>'+
+            a.hw.map(h=>'<span class="tag hw">'+esc(h)+'</span>').join("")+
+          '</div>'+
+          '<p class="tip">'+esc(a.tip)+'</p>'+
+          '<div class="gate">'+gateHtml(a.gate)+'</div>'+
+          '<div class="ref">参考：<code>'+esc(a.ref)+'</code></div>'+
+          '<button class="mark" title="标记为我要做">✓</button>'+
+        '</div>';
+      }).join("") + '</div>';
+    host.appendChild(sec);
+    shown += list.length;
+  });
+
+  document.getElementById("listCnt").textContent = "共 " + shown + " 项";
+  document.getElementById("doneN").textContent = done.size;
+
+  host.querySelectorAll(".card").forEach(c=>{
+    c.querySelector(".mark").addEventListener("click", e=>{
+      e.stopPropagation();
+      const id = c.dataset.id;
+      if (done.has(id)) done.delete(id); else done.add(id);
+      localStorage.setItem(KEY, JSON.stringify([...done]));
+      c.classList.toggle("done", done.has(id));
+      document.getElementById("doneN").textContent = done.size;
+    });
+  });
+}
+
+/* 顶部统计 */
+(function(){
+  const all = GROUPS.reduce((s,g)=>s+g.apps.length,0);
+  const ready = GROUPS.reduce((s,g)=>s+g.apps.filter(a=>a.f==="ready").length,0);
+  const no = GROUPS.reduce((s,g)=>s+g.apps.filter(a=>a.f==="no").length,0);
+  document.getElementById("stats").innerHTML = [
+    '<div class="stat ok"><b>'+all+'</b><span>条清晰可做的应用路线（按板上实际硬件筛过）</span></div>',
+    '<div class="stat"><b>'+ready+'</b><span>条有现成例程，抄一份就能跑起来</span></div>',
+    '<div class="stat warn"><b>3 / 256</b><span>蜂窝网格已用格数 / 上限（现在只放了 3 个）</span></div>',
+    '<div class="stat"><b>'+no+'</b><span>条是板子真没有的，别在这浪费时间</span></div>'
+  ].join("");
+})();
+
+document.querySelectorAll("#filters .pill").forEach(p=>{
+  p.addEventListener("click", ()=>{
+    document.querySelectorAll("#filters .pill").forEach(x=>x.classList.remove("on"));
+    p.classList.add("on");
+    filter = p.dataset.f;
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>

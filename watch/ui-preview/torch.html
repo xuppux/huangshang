@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>手电筒 App（修好轻触 + 加频闪）· 黄山派手表</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --line:#dfe3e8; --line2:#eef1f4;
+    --tx:#1f2328; --tx2:#59636e; --tx3:#8b949e;
+    --accent:#e07000; --blue:#1565c0; --green:#1a7f37; --red:#c62828;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--tx);
+    font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:30px 22px 64px}
+
+  h1{font-size:25px;margin:0 0 8px;letter-spacing:-.2px}
+  .lede{color:var(--tx2);font-size:14.5px;margin:0 0 6px}
+  .lede b{color:var(--tx)}
+
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:20px 22px;margin-top:18px;
+  }
+  h2{font-size:15.5px;margin:0 0 14px;display:flex;align-items:center;gap:9px}
+  h2::before{content:"";width:3px;height:15px;border-radius:2px;background:var(--accent)}
+  h2 .sub{font-weight:400;color:var(--tx3);font-size:12.5px}
+  h3{font-size:13.5px;margin:18px 0 8px;color:var(--tx)}
+  h3:first-child{margin-top:0}
+  p{margin:0 0 10px}
+  code{background:#f2f4f7;border:1px solid var(--line2);border-radius:4px;padding:1px 5px;
+       font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+  .muted{color:var(--tx2)}
+  .small{font-size:12.5px}
+
+  .cols{display:grid;grid-template-columns:auto 1fr;gap:34px;align-items:start}
+  @media (max-width:900px){.cols{grid-template-columns:1fr}}
+
+  /* ── 模拟表屏 390x450 ── */
+  .stage{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .phone{
+    position:relative;width:390px;height:450px;border-radius:26px;
+    background:#fff;border:1px solid #cfd6dd;overflow:hidden;
+    box-shadow:0 3px 14px rgba(20,30,50,.09);cursor:pointer;user-select:none;
+  }
+  .phone.dim{background:#f2f3f5}
+  /* 装机后是整屏纯白；这里加一层极淡的网格，纯粹为了在电脑上看得出边界 */
+  .phone .grid{position:absolute;inset:0;opacity:.35;
+    background-image:linear-gradient(#f0f2f5 1px,transparent 1px),
+                     linear-gradient(90deg,#f0f2f5 1px,transparent 1px);
+    background-size:39px 45px;transition:opacity .2s}
+  .phone.dim .grid{opacity:.9}
+  .t1{position:absolute;top:34px;left:0;right:0;text-align:center;
+      font-size:22px;font-weight:600;color:#2b303a;letter-spacing:.5px;transition:color .2s}
+  .t2{position:absolute;top:68px;left:0;right:0;text-align:center;
+      font-size:12px;color:#8e96a3;transition:color .2s}
+  .phone.dim .t1{color:#aeb5bf}
+  .phone.dim .t2{color:#c3c9d1}
+  .badge{
+    position:absolute;left:50%;transform:translateX(-50%);bottom:66px;
+    font-size:14px;padding:7px 19px;border-radius:999px;border:2px solid #c2c8d2;color:#c2c8d2;
+    background:transparent;transition:all .18s;
+  }
+  .badge.on{border-color:#e09a00;color:#e09a00;background:rgba(224,154,0,.07)}
+  .badge.flash{border-color:#2f6fed;color:#2f6fed;background:rgba(47,111,237,.07)}
+  .hintx{position:absolute;left:0;right:0;bottom:10px;text-align:center;
+         font-size:12px;color:#8e96a3;line-height:1.55;transition:color .2s}
+  .phone.dim .hintx{color:#c3c9d1}
+
+  /* 顶部 34px 上划手势条 —— 计算器和手电筒都避开了它 */
+  .topbar{position:absolute;left:0;right:0;top:0;height:34px;
+          border-bottom:1px dashed #e3e8ee;pointer-events:none}
+  .topbar span{position:absolute;left:8px;top:9px;font-size:9px;color:#b6bfc9;letter-spacing:.5px}
+
+  /* 那颗 WS2812 —— 右上角给个发光示意；频闪用 5Hz 的 steps 闪烁（和固件 100ms 同频） */
+  .ledglow{position:absolute;right:16px;top:10px;width:12px;height:12px;border-radius:50%;
+           background:#dfe4ea;transition:background .18s,box-shadow .18s}
+  .ledglow.on{background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.9),0 0 18px 8px rgba(255,235,170,.95)}
+  @keyframes strobe{0%,49%{opacity:1}50%,100%{opacity:.1}}
+  .ledglow.flash{background:#fff;animation:strobe .2s steps(1,end) infinite;
+                 box-shadow:0 0 0 3px rgba(255,255,255,.9),0 0 18px 8px rgba(255,235,170,.95)}
+
+  .cap{font-size:12.5px;color:var(--tx3);text-align:center;max-width:400px}
+  .cap b{color:var(--blue)}
+
+  /* ── 双光源卡片 ── */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:760px){.two{grid-template-columns:1fr}}
+  .src{border:1px solid var(--line);border-radius:10px;padding:14px 16px;background:#fbfcfd}
+  .src h4{margin:0 0 8px;font-size:13.5px;display:flex;align-items:center;gap:7px}
+  .tag{font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--line)}
+  .tag.main{background:#fff4e5;border-color:#f3d7a8;color:#a35d00}
+  .tag.aux{background:#eef4ff;border-color:#cddffb;color:#1550a8}
+  .src ul{margin:0;padding-left:18px;color:var(--tx2);font-size:12.8px}
+  .src li{margin:3px 0}
+
+  /* ── 串口证据 ── */
+  table{border-collapse:collapse;width:100%;font-size:12.8px}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:#f7f9fb;font-weight:600;font-size:12.5px}
+  td code{background:#f6f8fa;font-size:12px}
+  .ok{color:var(--green);font-weight:600}
+  .warn{color:#b8730a;font-weight:600}
+
+  /* ── 计算器 改前/改后 ── */
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px}
+  .seg button{
+    border:0;background:#fff;padding:7px 15px;font-size:13px;cursor:pointer;color:var(--tx2);
+    font-family:inherit;
+  }
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button.on{background:var(--blue);color:#fff}
+  .calcwrap{position:relative;width:390px;height:450px;border-radius:22px;overflow:hidden;
+            border:1px solid #cfd6dd;background:#fff;box-shadow:0 3px 14px rgba(20,30,50,.09);
+            margin:0 auto;flex:none}
+  .ccard{position:absolute;left:14px;top:34px;width:362px;height:136px;
+         background:#f7f9fb;border:1px solid var(--line2);border-radius:10px}
+  .cback{position:absolute;left:26px;top:38px;width:64px;height:40px;border-radius:9px;
+         background:#eef1f5;border:1px solid #dde3ea;display:flex;align-items:center;
+         justify-content:center;color:#e07000;font-size:19px;transition:opacity .18s}
+  .cback.gone{opacity:0;pointer-events:none}
+  .cexpr{position:absolute;top:48px;right:14px;color:#8b949e;font-size:13px;text-align:right;
+         transition:width .18s;overflow:hidden;white-space:nowrap}
+  .cres{position:absolute;bottom:12px;right:14px;font-size:30px;font-weight:300;color:#1f2328}
+  .cpad{position:absolute;left:15px;top:180px;width:360px;height:260px}
+  .ckey{position:absolute;height:48px;border-radius:9px;background:#fff;border:1px solid var(--line);
+        display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--tx)}
+  .ckey.op{color:var(--accent)}
+  .ckey.eq{background:var(--accent);border-color:var(--accent);color:#fff}
+  .ckey.dim{color:#8b949e}
+  .rf{position:absolute;top:0;bottom:0;border-left:1px dashed #f0a020;opacity:0;transition:opacity .18s}
+  .rf.on{opacity:1}
+  .rf b{position:absolute;top:4px;left:4px;font-size:10px;background:#fff6e6;border:1px solid #f5d9a8;
+        color:#b8730a;border-radius:4px;padding:1px 5px;white-space:nowrap;font-weight:500}
+
+  .note{background:#fff8e9;border:1px solid #f2ddb0;border-radius:9px;padding:12px 15px;font-size:13px}
+  .note b{color:#a35d00}
+  .good{background:#f0f9f2;border:1px solid #cbe7d3;border-radius:9px;padding:12px 15px;font-size:13px}
+  .good b{color:var(--green)}
+  .bad{background:#fdf1f1;border:1px solid #f0cfcf;border-radius:9px;padding:12px 15px;font-size:13px}
+  .bad b{color:var(--red)}
+
+  ol.plain{padding-left:20px;margin:0}
+  ol.plain li{margin:5px 0}
+  .kv{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:var(--tx2)}
+
+  /* 三态示意条 */
+  .three{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0 2px}
+  .three div{border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fbfcfd;
+             font-size:12.6px;color:var(--tx2)}
+  .three b{display:block;color:var(--tx);font-size:12.8px;margin-bottom:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>手电筒 App：灯不亮的真凶找到了</h1>
+  <p class="lede">
+    你两次反馈<b>轻触点不亮</b>。第二次我没再猜 app 代码，改成先证明"你的点击到底有没有送到"——
+    结果<b>送到了</b>，一次不落。真正的病根是 <code>proj.conf</code> 里<b>一个编译宏名抄错</b>：
+    写成 <code>..._CC1_USING_DMA</code>，正确是 <code>..._UPDATE_USING_DMA</code>。
+    差这一个词，PWM 的 DMA 句柄就是空的，而<b>驱动在句柄为空时照样返回"成功"</b>，
+    于是串口全绿、灯却从来不亮。已修，正在重编。
+  </p>
+
+  <div class="card">
+    <h2>手电筒 · 点一下模拟屏试试 <span class="sub">轻触循环：关 → 常亮 → 频闪</span></h2>
+    <div class="cols">
+      <div class="stage">
+        <div class="phone" id="phone">
+          <div class="grid"></div>
+          <div class="topbar"><span>上划手势条 34px（避开）</span></div>
+          <div class="ledglow" id="ledglow"></div>
+          <div class="t1" id="t1">手电筒</div>
+          <div class="t2" id="t2">常亮 · 屏幕不会自动熄灭</div>
+          <div class="badge" id="badge">LED 关</div>
+          <div class="hintx">轻触屏幕 = 常亮 / 频闪 / 关<br>右边缘往左滑 = 退出</div>
+        </div>
+        <div class="cap">装机时整屏<b>纯白</b>、背光拉到 <b>100%</b>；这里加淡淡的网格只是为了在电脑上看得见边界。
+          右上角那个小亮点代表板子背面的 WS2812。</div>
+      </div>
+
+      <div>
+        <h3>轻触现在是三档循环</h3>
+        <div class="three">
+          <div><b>LED 关</b>屏幕还是亮的，只是背面那颗小灯不亮</div>
+          <div><b>LED 常亮</b>满白长亮，约 60mA</div>
+          <div><b>LED 频闪</b>5Hz（100ms 翻一次）</div>
+        </div>
+        <p class="small muted" style="margin-top:10px">
+          进 app 默认就是<b>常亮</b> —— 手电筒进来就该亮，不该还要点一下。
+          所以第一次轻触是切到频闪，不是"开灯"。
+        </p>
+
+        <h3>为什么轻触不用 <code>LV_EVENT_CLICKED</code></h3>
+        <p class="small muted">
+          <code>CLICKED</code> 是 LVGL 自己在一串条件都满足时才合成的：按下命中、没被滚动接管、
+          抬起与按下还是同一对象……<b>这条链上任何一环被别的对象插一脚，事件就静默不触发</b>，
+          而且从代码上完全看不出来，现象只是"点了没反应"，没法往下查。
+        </p>
+        <p class="small muted">
+          现在自己收 <code>PRESSED</code> / <code>RELEASED</code>：
+          <b>位移 &lt; 24px 且时长 &lt; 1.2s</b> 才算一次轻触。
+          好处是每次按下抬起都会打一行日志（<code>torch: evt PRESSED x=195 y=300</code>），
+          "事件到底到没到"一眼可判；顺带把"手指划一下也被当成点击"这种误触一起挡掉。
+        </p>
+
+        <h3>屏幕不会自动熄灭</h3>
+        <p class="small muted">
+          <code>watch_demo.c</code> 里那个 30ms 一次的定时器，只要
+          <code>lv_disp_get_inactive_time() &gt; 10s</code> 就 <code>gui_pm_fsm(SLEEP)</code>。
+          手电筒恰恰是"开着不动"的用法 —— 不挡就是 10 秒后自己黑掉。
+          做法是起一个 1s 的 <code>lv_timer</code> 反复 <code>lv_disp_trig_activity()</code>，
+          不用去改 watch_demo.c 那套 PM 逻辑。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>真凶：一个编译宏名抄错 <span class="sub">差一个词，灯全黑</span></h2>
+    <p class="small">
+      先把上一轮"软件全绿、剩硬件"的结论<b>撤掉</b>——那句话是我误判。
+      这次不猜代码，先回答一个更基础的问题：<b>你点屏幕，事件到底有没有送到 app？</b>
+      用 <code>tp_ctrl click</code> 从触摸驱动层注入一次真点击（走完整 LVGL 输入通路，不是绕过），
+      串口立刻打出：
+    </p>
+    <p class="kv" style="background:#f7f9fb;border:1px solid var(--line2);border-radius:8px;padding:12px 14px;white-space:pre;line-height:1.7">torch: evt PRESSED(1) x=195 y=300
+torch: evt RELEASED(8) x=195 y=300
+torch: release dx=0 dy=0 dt=96ms -> TAP
+torch: led mode=2 (0=off 1=on 2=strobe) ret=0 found=1</p>
+    <p class="small muted" style="margin-top:8px">
+      <b>事件到了、判定过了、模式也循环了</b>（连点三次 <code>mode</code> 走 1→2→0→1）。
+      所以你看到的"没反应"，从来不是触摸的问题 —— 是<b>灯根本就没亮过</b>，
+      而灯不亮的反馈只有一颗小小的光点，看起来就像"点没生效"。
+    </p>
+
+    <table>
+      <tr><th style="width:30%">现象</th><th style="width:34%">说明什么</th><th>怎么判</th></tr>
+      <tr><td>点下去<b>一行日志都没有</b></td>
+          <td>触摸没送到这个界面（命中失败 / 被别的对象吃掉）</td>
+          <td><code>torch_act</code> 看 indev 内部状态与真实命中</td></tr>
+      <tr><td>有 <code>PRESSED</code> 没有 <code>RELEASED</code></td>
+          <td>手指被 <code>PRESS_LOST</code> 抢走了</td>
+          <td>日志里会直接打 <code>PRESS_LOST</code></td></tr>
+      <tr><td>有 <code>release … -&gt; TAP</code> 但灯不亮</td>
+          <td><b>触摸这层已经清了</b>，往驱动/编译配置走</td>
+          <td>看 <code>ret=</code>——但见下方警告，它不一定是真的</td></tr>
+      <tr><td><code>tp_ctrl click 195 300</code> 也没反应</td>
+          <td>才是触摸驱动/校准层的问题</td>
+          <td>这一条比手点更干净：坐标固定、时序确定</td></tr>
+    </table>
+
+    <h3>病根链条：为什么"返回值 0"是个假绿灯</h3>
+    <p class="small muted">
+      写 WS2812 只认 <code>rt_device_find("rgbled")</code> + <code>PWM_CMD_SET_COLOR</code>，
+      一路都是 <code>RT_EOK</code>。但往驱动里点进一层就发现：
+    </p>
+    <table>
+      <tr><th style="width:34%">事实</th><th>含义</th></tr>
+      <tr><td><code>drv_rgbled.c</code> 写死 <code>config.dma_type = 0</code></td>
+          <td>驱动去取 <code>pwm-&gt;pwm_update_dma</code> 这个句柄</td></tr>
+      <tr><td>只有 <code>#ifdef BSP_PWM3_UPDATE_USING_DMA</code> 才给它赋值</td>
+          <td>我的 <code>proj.conf</code> 写的是 <code>..._CC1_...</code> → <b>这个宏压根没定义</b></td></tr>
+      <tr><td>句柄是 <code>NULL</code>，但 <code>PWM_CMD_SET</code> / <code>ENABLE</code> <b>照样返回 <code>RT_EOK</code></b></td>
+          <td><b>返回 0 只证明"调用被受理了"，不证明硬件动了。</b>这才是死结所在</td></tr>
+    </table>
+    <div class="bad" style="margin-top:10px">
+      <b>教训：</b>驱动返回值 <code>ret=0</code> <b>不能</b>当作"硬件真的动了"的证据；
+      "<b>我的代码和官方例程一字不差</b>"也不是——<b>配置文件没一起比</b>，就等于没比。
+      官方例程的 <code>proj.conf</code> 里明明白白写着 <code>UPDATE</code>，我当初是照字面猜成 <code>CC1</code> 的。
+    </div>
+
+    <h3>改了什么</h3>
+    <ol class="plain small muted">
+      <li><b><code>project/proj.conf</code> 第 155 行</b>：
+          <code>CONFIG_BSP_PWM3_CC1_USING_DMA</code> → <code>CONFIG_BSP_PWM3_UPDATE_USING_DMA</code>。
+          这是<b>唯一的实质修复</b>，其余都是为了看清它而加的取证。</li>
+      <li><b>轻触改手写判定</b>（不再用 <code>LV_EVENT_CLICKED</code>）：
+          自收 <code>PRESSED</code>/<code>RELEASED</code>，位移 &lt; 24px 且 &lt; 1.2s 才算一次轻触。
+          好处是每次动作都有日志，把"没反应"从黑盒变成可读的一行 —— 上面那段 <code>evt PRESSED / RELEASED</code> 就是它打出来的。</li>
+      <li><b>LDO + pinmux 每次点亮都重做</b>：原来用一个 <code>s_led_ready</code> 做成只跑一次，
+          但休眠会关掉灯珠的 LDO3_3V3、也可能把 PA32 从 <code>GPTIM2_CH1</code> 复位回 GPIO。
+          现在 find 设备只做一次，供电和引脚复用每次重做。</li>
+      <li><b>驱动返回值记进 <code>last_ret</code></b>：不再丢掉，
+          <code>torch_info</code> 一行可见 —— 虽然这一轮证明了它<b>不能单独当证据</b>，
+          但"丢了更没法查"。</li>
+    </ol>
+
+    <h3>顺带说清：颜色是 8bit/通道</h3>
+    <p class="small muted">
+      从驱动实现里确认：<code>red = (color &amp; 0x00ff0000) &gt;&gt; 16</code>，逐位映射成 PWM 占空比。
+      所以 SDK 例程那个 <code>0x0f0f0f</code> 只有 <b>6%</b> 亮度 —— 当氛围灯够、当手电筒远远不够，
+      满白必须是 <code>0xFFFFFF</code>。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>光有两个来源 <span class="sub">别只做屏幕那一个</span></h2>
+    <div class="two">
+      <div class="src">
+        <h4>屏幕 <span class="tag main">主光源</span></h4>
+        <ul>
+          <li>整屏纯白（<code>#FFFFFF</code>）+ 背光 <code>100%</code></li>
+          <li>纯 LVGL，<b>不需要任何编译开关</b></li>
+          <li>面积最大、真能照东西</li>
+          <li>靠 1s 定时器顶住 10s 自动息屏</li>
+        </ul>
+      </div>
+      <div class="src">
+        <h4>WS2812 小灯 <span class="tag aux">辅助光源</span></h4>
+        <ul>
+          <li>板子背面那颗，挂在 <b>PA32 / GPTIM2_CH1</b></li>
+          <li>点光源，颜色 <code>0xFFFFFF</code> 满白</li>
+          <li>要开 5 个编译开关（见下）</li>
+          <li><b>电源和引脚复用每次进 app 都要重做</b></li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>⚠ 四个容易漏的前提（漏一个就"串口全绿、灯不亮"）</h3>
+    <ol class="plain small">
+      <li><b>配置里那个 DMA 宏必须是 <code>UPDATE</code> 而不是 <code>CC1</code>。</b>
+          <b>这才是这次真正踩到的坑</b>，也是最难发现的 —— 它不在 <code>.c</code> 里，
+          编译器不报错、运行时不报错、<code>ret</code> 还是 0。
+          写成 <code>CC1</code> 时 rgbled 要的 DMA 句柄是空的，
+          驱动会静默退回到"不带 DMA 的普通 PWM"，于是 WS2812 的时序根本没发出来。</li>
+      <li><b>灯珠是片上 LDO3_3V3 供电的。</b>必须
+          <code>HAL_PMU_ConfigPeriLdo(PMU_PERI_LDO3_3V3, true, true)</code>，
+          否则怎么设颜色都不亮，而代码看起来完全正确。</li>
+      <li><b>PA32 默认不是 PWM 脚。</b>板级 <code>bsp_pinmux.c</code> 把它初始化成了
+          <code>GPIO_A32</code>（下拉），要自己重新映射成 <code>GPTIM2_CH1</code>，WS2812 的时序才有地方出来。</li>
+      <li><b>颜色是 8bit/通道，不是 4bit。</b>驱动里是
+          <code>red = (color &amp; 0x00ff0000) &gt;&gt; 16</code>，
+          所以 SDK 例程那个 <code>0x0f0f0f</code> 其实只有 <b>6%</b> 亮度 —— 当氛围灯够，当手电筒不够。
+          满白是 <code>0xFFFFFF</code>。</li>
+    </ol>
+    <div class="note">
+      <b>第 2、3 条不是"配置一次就完"的，是"每次进 app 都要重做"的。</b>
+      这点很容易漏 —— 见上一节。
+      <br>第 1 条正相反：<b>改一次就一劳永逸</b>，但它藏在编译配置里，
+      改错了没有任何报错，只有"灯永远不亮"这一个现象。
+    </div>
+
+    <h3>要加进 <code>project/proj.conf</code> 的 5 行</h3>
+    <p class="kv" style="background:#f7f9fb;border:1px solid var(--line2);border-radius:8px;padding:12px 14px;white-space:pre;line-height:1.7"><b>CONFIG_BSP_PWM3_UPDATE_USING_DMA=y</b>
+CONFIG_RGB_SK6812MINI_HS_ENABLE=y
+CONFIG_RGB_USING_SK6812MINI_HS_DEV_NAME=y
+CONFIG_RGB_USING_SK6812MINI_HS_PWM_DEV_NAME="pwm3"
+CONFIG_BSP_USING_RGBLED_CH=1</p>
+    <p class="small muted" style="margin-top:8px">
+      五行照抄 SDK 给这颗芯片的现成例程（<code>watch/ws2812/</code> 与
+      <code>example/rt_device/rgb_led/</code>，对本板取值一致）。
+      <b>第一行是这轮的真凶</b>：我原先写成 <code>..._CC1_USING_DMA</code>，而例程里是 <code>UPDATE</code>。
+      两者的区别是"DMA 由定时器的哪个事件触发"——
+      <code>UPDATE</code> 是周期更新事件、<code>CC1</code> 是通道比较事件；
+      而 rgbled 驱动走的是<b>更新事件那条路</b>，写成 <code>CC1</code> 这个宏就等于没开，句柄是空的。
+    </p>
+    <div class="bad" style="margin-top:10px">
+      <b>规则：配置名一律照抄官方例程，不要凭字面猜。</b>
+      <code>CC1</code> 看起来"更像 PWM 一点"，但驱动要的是 <code>UPDATE</code>。
+      猜错的代价是编译器不报错、运行时不报错、串口全绿、灯全黑 —— 最难受的一类错。
+    </div>
+    <p class="small muted">
+      另外：<code>..._DEV_NAME</code> 那行才是<b>注册设备名</b>的开关 ——
+      不开它，驱动里 <code>RGBLED_NAME</code> 都不存在，<code>rt_device_find("rgbled")</code> 永远返回空。
+      PWM2 被 LCD 背光占着，所以用 PWM3。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>计算器：返回键删掉 <span class="sub">切换看看差别</span></h2>
+    <div class="seg" id="seg">
+      <button class="on" data-v="before">改之前</button>
+      <button data-v="after">改之后</button>
+    </div>
+    <div class="calcwrap">
+      <div class="topbar"><span>上划手势条 34px</span></div>
+      <div class="ccard"></div>
+      <div class="cback" id="cback">←</div>
+      <div class="rf" id="rf"><b>算式行右边界</b></div>
+      <div class="cexpr" id="cexpr">12345678901234567</div>
+      <div class="cres">188</div>
+      <div class="cpad" id="cpad"></div>
+    </div>
+    <p class="small muted" style="margin-top:14px">
+      ⚠ 删的是卡片左上角那个 <b>64×40 的「←」按钮</b>（点它 <code>gui_app_goback()</code> 回主菜单）。
+      <b>键盘第一行那个「←」是退格</b>（<code>in_back()</code>），是计算器功能，跟"退出 app"毫无关系，<b>必须保留</b>。
+      把这两个搞混是这轮最容易出错的地方。
+    </p>
+    <p class="small muted">
+      顺带把腾出来的宽度给了算式行：原来要为返回键留 84px，
+      <code>max_width</code> 是 <code>362 - 84 - 24 = 254</code>；现在左右各留 14px，
+      变成 <code>362 - 28 = 334</code>，长算式能多显示 80px。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>能自动验的 vs 只能靠眼睛的 <span class="sub">先说清楚边界</span></h2>
+    <p class="small">
+      「灯到底亮没亮」屏幕截不到、串口看不见，<b>最后一步只能靠人眼</b>。
+      但这不代表整条链路都只能靠眼睛 —— 下面这些都能从串口读出来：
+    </p>
+    <table>
+      <tr><th style="width:36%">命令 / 观察点</th><th>验的是什么</th></tr>
+      <tr><td><code>torch_info</code></td>
+          <td>一行总览：<code>on</code> / <code>mode</code> / <code>saved_bright</code> /
+              <code>led_found</code> / <code>last_ret</code>（<b>驱动返回值</b>）/ <code>strobe_timer</code> /
+              <code>root x=… clickable=…</code></td></tr>
+      <tr><td><code>torch_hit 195 300</code></td>
+          <td>问"这个坐标点下去会命中谁"。
+              回 <code>ROOT(good)</code> = 事件一定能送到；回 <code>OTHER</code> / <code>NOTHING</code> = 被挡了或尺寸不对</td></tr>
+      <tr><td><b><code>torch_act</code></b>（本轮新增）</td>
+          <td><b>拆触摸黑盒的主力</b>：把 LVGL 输入设备内部状态全打出来 ——
+              <code>type</code> / <code>state</code> / <code>disabled</code> /
+              <code>raw</code>·<code>act</code>·<code>last</code> 三个坐标 /
+              <code>rot</code>·<code>offset</code> / <code>act_obj</code>·<code>last_pressed</code>，
+              再用 LVGL 自己的 <code>lv_indev_search_obj()</code> 做一次<b>真命中测试</b>，
+              打印 <code>real-hit FINAL=… is_root=…</code>。
+              这一条就能把「事件没到 / 被别的层挡 / 触摸没进 LVGL」三种原因分开</td></tr>
+      <tr><td><b><code>torch_tree</code></b>（本轮新增）</td>
+          <td>递归打印 <code>layer_top</code> / <code>layer_sys</code> / <code>scr</code> 下面的对象树
+              （<code>WxH at(x,y) clk/hid/opa</code> + 缩进）。
+              用来确认"屏幕上到底压着什么"—— 本轮就是靠它看到
+              <code>layer_top</code> 上那个 20×450 的左边缘手势条，确认它<b>不挡中间</b></td></tr>
+      <tr><td><b><code>tp_ctrl click 195 300</code></b>（SDK 自带）</td>
+          <td><b>端到端验输入通路</b>：从触摸驱动层注入一次按下+抬起，
+              <b>走完整 LVGL 输入通路</b>（和手点等效），比 <code>torch_tap</code> 更硬 ——
+              <code>torch_tap</code> 是直接调 app 的判定函数，跳过了触摸这一层</td></tr>
+      <tr><td><code>torch_tap</code></td>
+          <td>模拟一次轻触，走的是<b>和真手指完全同一条逻辑</b>。
+              它有效而手点无效 → 触摸路径的问题；它也无反应 → 逻辑的问题。<b>把两类原因分开</b></td></tr>
+      <tr><td><code>torch_strobe</code> / <code>torch_strobe 0</code></td>
+          <td>直接进/出频闪模式，不看触摸</td></tr>
+      <tr><td><code>torch_raw FF0000</code></td>
+          <td><b>现场试灯用</b>：直接写任意颜色（红色在满白背景下最容易看出灯亮不亮）。
+              回 <code>raw 0xFF0000 -&gt; ret=0</code>。<br>
+              ⚠ <b>它会把 <code>mode</code> 置成 0</b>（故意的：手动试色要退出模式循环，
+              否则会被频闪定时器立刻覆盖）。所以 <code>torch_info</code> 里
+              <code>mode=0</code> <b>不代表灯是灭的</b>，别被这一行误导</td></tr>
+      <tr><td><code>torch_comp 0|1</code></td>
+          <td>切驱动结构体里的 <code>is_comp</code> 字段并立刻重写一次颜色，用来对比亮度差异</td></tr>
+      <tr><td><code>torch_evt 0|1</code></td>
+          <td>触摸事件日志开关（<b>默认开</b>）。按下/抬起各打一行坐标，稳定之后可以关掉</td></tr>
+      <tr><td><code>torch_led 1</code> / <code>torch_led 0</code></td>
+          <td>强制常亮 / 灭。不带参数 = 按轻触的循环走一格</td></tr>
+      <tr><td><code>torch_on</code> / <code>torch_off</code></td>
+          <td>背光存/还的往返：<code>ON backlight=100 (saved N)</code> → <code>OFF backlight restored to N</code></td></tr>
+      <tr><td><code>torch_ui</code></td>
+          <td><b>从串口直接进这个 app</b>（照 <code>to_clock</code> 那套 <code>gui_app_run()</code>）。
+              没有它，「界面建没建 / 防息屏定时器起没起 / 退出还背光没」三件事一条都验不到</td></tr>
+      <tr><td><code>calc_menu</code></td>
+          <td>遍历框架内置 app 列表，确认 <code>torch</code> 真的落在蜂窝某一格
+              （<b>icon 为 NULL 的 app 不会进蜂窝</b>，这是最常见的坑）</td></tr>
+      <tr><td class="warn">物理上那颗灯亮不亮</td><td class="warn">只能靠人眼。这才是真正需要你确认的一项</td></tr>
+    </table>
+    <div class="note" style="margin-top:14px">
+      <b>⚠ 切换动作必须走 <code>lv_async_call</code> 派回 GUI 线程。</b>
+      串口命令跑在 shell 线程，直接在里面碰 LVGL 会撞
+      <code>CHECK_CUR_RTOS_TASK()</code> 的断言 —— 和 <code>swipe_sim</code> 同一个理由。
+      只读的诊断（<code>torch_info</code> / <code>torch_act</code> / <code>torch_tree</code> / <code>torch_hit</code>）可以直接调。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>实测跑到哪一步了 <span class="sub" id="whenrun">2026-09-23 真机 · COM3 · 修复版 v6</span></h2>
+    <table id="measured">
+      <tr><th style="width:34%">环节</th><th>结果</th></tr>
+      <tr><td><b>先证明触摸是通的</b>（本轮关键）</td>
+          <td><code>tp_ctrl click 195 300</code> 注入真点击（走完整 LVGL 输入通路，和手点等效）→
+              <code>torch: evt PRESSED(1) x=195 y=300</code> /
+              <code>evt RELEASED(8)</code> /
+              <code>release dx=0 dy=0 dt=96ms -&gt; TAP</code>。
+              <b>你的点击一直是到达的</b></td></tr>
+      <tr><td>事件计数</td>
+          <td><code>evt_total=174 down=3 up=3 lost=0 click=3</code> ——
+              三次注入点击 <b>按下 3 / 抬起 3 / 丢失 0</b>，一次都没漏</td></tr>
+      <tr><td>真实命中测试</td>
+          <td><code>real-hit(195,300) scr-&gt;g_root is_root=1</code>（用的是 LVGL 自己的
+              <code>lv_indev_search_obj()</code>，不是我手写的近似版）。
+              <code>torch_tree</code> 显示 <code>layer_top</code> 上只有两条边缘手势条
+              （左 20×450 @x=20、右 16×450 @x=374），<b>都不挡中间</b></td></tr>
+      <tr><td>模式循环</td>
+          <td>连点三次，<code>mode</code> 走 <code>1 → 2 → 0 → 1</code>，每次
+              <code>ret=0 found=1</code> —— <b>触摸与逻辑这一段一直是对的</b></td></tr>
+      <tr><td>驱动注册</td>
+          <td>开机日志 <code>[2905] I/drv.rgb main: rgbled register success, supporting 1 LEDs</code>；
+              进 app 后 <code>torch: rgbled found (pwm=pwm3 ch=1)</code></td></tr>
+      <tr><td><b>定位到真凶</b></td>
+          <td><code>rtconfig.h</code> 里原先只有 <code>BSP_PWM3_UPDATE_USING_DMA</code>
+              <b>未定义</b>（我写成了 <code>CC1</code>）→
+              <code>pwm_update_dma = NULL</code>
+              （<code>drv_pwm.c:841</code>）→ 落到 <code>HAL_GPT_PWM_Start</code>
+              这条<b>不带 DMA 的</b>退路，<code>drv_pwm.c:902</code> 照样 <code>return RT_EOK</code>。
+              <b>这就是"返回值 0 却不亮"的全部原因</b></td></tr>
+      <tr><td><b>修复</b></td>
+          <td><code>proj.conf</code> 改成 <code>CONFIG_BSP_PWM3_UPDATE_USING_DMA=y</code>，
+              重编后 <code>rtconfig.h</code> 确认出现该宏、且无 <code>CC1</code>；
+              <code>BSP_RGB_LED_COUNT 1</code> / <code>RGBLED_CONTROL_PIN 32</code> 均在</td></tr>
+      <tr><td>编译</td>
+          <td>0 error，<code>scons: done building targets.</code>，
+              <code>main.bin</code> <b>2,553,368 B</b>（修复版；上一版 2,551,224 → <b>+2,144 B</b>）</td></tr>
+      <tr><td>烧录</td>
+          <td>COM3，<code>[OK] flash finished, the device has been reset</code></td></tr>
+      <tr><td>启动自检</td>
+          <td>烧完能正常启动：<code>build on Sep 23 2026</code> 的固件，
+              LCD <code>CO5300 id:331100h</code> 点亮、触摸 <code>ft6146</code> 挂上、
+              rgbled 注册成功、最后落到 <code>msh /&gt;</code></td></tr>
+      <tr><td>驱动写入</td>
+          <td><code>torch_raw 0xFF0000 -&gt; ret=0</code>；
+              <code>torch_raw 0xFFFFFF -&gt; ret=0</code>；
+              <code>torch_led 1</code> → <code>led mode=1 ret=0 found=1</code>。
+              现在这条 <code>ret=0</code> <b>才是真的走到了 DMA</b>（见上一条的依赖链）</td></tr>
+      <tr><td>频闪</td>
+          <td><code>strobe_timer</code> 从 <code>0x0</code> 变成非空指针，<code>phase</code> 在 0/1 之间翻 —— 真的在闪</td></tr>
+      <tr><td>背光存还</td>
+          <td>进 app <code>ON backlight=100</code>、退出恢复；本轮进 app 前本来就是 100，所以是 <code>saved 100</code></td></tr>
+      <tr><td>防息屏</td>
+          <td><code>keep_timer=0x2004f344</code>（非 0），1s 一次重置空闲计时，顶住 10s 自动息屏</td></tr>
+      <tr><td>几何自检</td>
+          <td><code>root x=0..389 y=0..449 (390x450) clickable=1 scrollable=0</code>；
+              <code>badge bottom=-66 hint bottom=-10</code>（都在 16px 手势条之上）</td></tr>
+      <tr><td>预览页冒烟测试</td>
+          <td><b>20/20 PASS</b>（页面改动后重跑）</td></tr>
+      <tr><td class="warn">那颗灯到底亮不亮</td>
+          <td class="warn">机器验不了。<b>只剩这一项要你亲眼看</b></td></tr>
+    </table>
+
+    <div class="good" style="margin-top:14px">
+      <b>这次和上一轮的结论不一样了：</b>上一轮我说"软件侧查到底了、剩下是硬件"—— 那是错的。
+      软件里还有一处实实在在的错，就在<b>配置文件</b>那一行。
+      现在这条链从「配置宏 → 驱动句柄 → DMA 通道 → PWM 输出」四步都在源码上核对过了，
+      <b>每一环都能指出具体文件与行号</b>，不再是"看起来没问题"。
+    </div>
+
+    <h3>万一还是不亮：按顺序量两个电压</h3>
+    <ol class="plain small">
+      <li>万用表量<b>灯珠 VDD 对 GND</b> → 期望 <b>≈3.3V</b>，验 LDO 有没有上电。</li>
+      <li>万用表量 <b>PA32 对 GND</b> → 直流档读到的应是脉冲均值，<b>约 0.8~1.7V</b>。
+          量不到 0.8V 以上就说明引脚没输出。</li>
+      <li>上面两步都正常但灯不亮 → 灯珠本体 / 焊接 / 方向（SK6812MINI 有方向标记）。</li>
+    </ol>
+    <p class="small muted">
+      ⚠ 别用万用表去"看"WS2812 的数据波形（800kHz 脉冲）—— 量不出来，只能量直流均值。
+    </p>
+
+    <div class="note" style="margin-top:14px">
+      <b>顺带记一个编译坑：</b><code>MSH_CMD_EXPORT(fn, desc)</code> 的描述里<b>不能有逗号</b> ——
+      会被预处理器当成参数分隔符，报成「passed 4 arguments, but takes just 2」，
+      看着完全不像逗号的问题。描述里逗号统一换成 <code>/</code>。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>落在哪几个文件</h2>
+    <table>
+      <tr><th style="width:46%">文件</th><th>改动</th></tr>
+      <tr><td><b><code>project/proj.conf</code></b> <span class="tag main">真凶在这</span></td>
+          <td><b>本轮唯一的实质修复</b>。第 155 行
+              <code>CONFIG_BSP_PWM3_CC1_USING_DMA</code> → <code>..._UPDATE_USING_DMA</code>。
+              其余改动都是为了看清它而加的取证</td></tr>
+      <tr><td><code>src/gui_apps/torch/main.c</code></td>
+          <td>轻触改手写判定（带事件日志）、LDO+pinmux 每次重做、
+              驱动返回值记录，串口命令扩到 <b>14 条</b>
+              （本轮新增 <code>torch_act</code> / <code>torch_tree</code>，
+              含 <code>torch_hit</code> / <code>torch_tap</code> / <code>torch_raw</code>）</td></tr>
+      <tr><td><code>src/gui_apps/torch/SConscript</code></td><td><b>新建</b>。照抄 calculator/ 那份</td></tr>
+      <tr><td><code>watchface-tools/make_torch_icon.py</code></td><td><b>新建</b>。生成橙色圆底 + 白色手电筒字形</td></tr>
+      <tr><td><code>resource/images/common/ezip/img_torch.png</code></td><td><b>新建</b>。丢进去即可，构建脚本自动编成 <code>lv_img_dsc_t img_torch</code></td></tr>
+      <tr><td><code>resource/strings/zh_cn.json</code> / <code>en_us.json</code></td><td>各加一行 <code>"torch": "手电筒"</code> / <code>"Flashlight"</code></td></tr>
+      <tr><td><code>src/gui_apps/calculator/main.c</code></td><td>删 <code>BACK_*</code> 常量 + <code>back_event_cb()</code> + 按钮创建；算式行 <code>max_width</code> 254 → 334</td></tr>
+      <tr><td><code>src/gui_apps/watch_demo.c</code></td><td>新增 <code>app_watch_brightness_get/set()</code>；循环档位改调 set（能力留在本文件，别人只看到函数）</td></tr>
+    </table>
+    <div class="good" style="margin-top:14px">
+      <b>SDK 一行没改。</b>这一轮的改动全在工程侧，
+      <code>sifli-sdk/</code> 工作区保持干净 —— 升级 SDK 不会被冲掉。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>还没做 / 等你拍板</h2>
+    <ol class="plain small">
+      <li><b>频闪频率</b>现在是 <code>TORCH_STROBE_MS 100</code>（全周期 200ms ≈ 5Hz）。
+          嫌快嫌慢改这一个宏。</li>
+      <li><b>频闪的占空比是对称的</b>（亮一半灭一半）。要"短闪长灭"（更像警示灯）也可以，说一声。</li>
+      <li><b>轻触只切小灯</b>，屏幕一直亮着。要不要让轻触把整屏也切成"灭"？现在是"要关就左滑退出"。</li>
+      <li><b>要不要 SOS</b>（三短三长三短）？频闪已经做了，SOS 是在它基础上多一个状态，不难。</li>
+      <li><b>那颗灯到底亮不亮</b>得你亲眼看一眼 —— 这是全链路唯一机器验不了的一环。
+          现在真凶修掉了，<b>预期是亮的</b>：进「手电筒」app 后屏幕全白，
+          同时板子<b>背面那颗小灯</b>应该是满白长亮；轻触一下变 5Hz 频闪，再点一下灭。
+          <b>如果还是不亮</b>，按上面「万一还是不亮」量那两个电压，
+          并把 <code>torch_info</code> 的整段输出发我（里面有 <code>last_ret</code>）。
+          想更狠一点，串口跑 <code>torch_raw FF0000</code> 直接写红色 —— 在白屏背景下最容易看出有没有亮。</li>
+    </ol>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  /* ⚠ 用同一个 __dbg 对象累加字段，不要整体覆盖 ——
+     两段脚本（手电筒 / 计算器）要往里面各写各的，谁覆盖谁都会把对方的断言搞挂。 */
+  var DBG = window.__dbg || (window.__dbg = {});
+
+  /* ── 手电筒模拟：轻触三态循环 ── */
+  var MODES = ['off', 'on', 'strobe'];
+  var mi = 0;
+  var phone = $('phone'), badge = $('badge'), glow = $('ledglow');
+  var TXT = { off: 'LED 关', on: 'LED 常亮', strobe: 'LED 频闪' };
+
+  /* 从真实 DOM 反推状态，供自检用 —— 不直接回读 mi，避免"写的和显示的不一致"。 */
+  function badgeState(){
+    var t = badge.textContent;
+    if (t.indexOf('频闪') >= 0) return 'strobe';
+    if (t.indexOf('常亮') >= 0) return 'on';
+    return 'off';
+  }
+
+  function paint(){
+    var m = MODES[mi];
+    badge.textContent = TXT[m];
+    badge.classList.toggle('on', m === 'on');
+    badge.classList.toggle('flash', m === 'strobe');
+    glow.classList.toggle('on', m !== 'off');
+    glow.classList.toggle('flash', m === 'strobe');
+    phone.classList.toggle('dim', m === 'off');
+    DBG.torchIdx = mi;
+    DBG.torchMode = badgeState();
+  }
+  phone.addEventListener('click', function(){ mi = (mi + 1) % MODES.length; paint(); });
+  paint();
+
+  /* ── 计算器键盘：和固件 key_tab 一致的 5 列布局 ── */
+  var keys = [
+    ['C',0],['←',0],['(',0],[')',0],['÷',1],
+    ['7',0],['8',0],['9',0],['%',1],['×',1],
+    ['4',0],['5',0],['6',0],['±',0],['-',1],
+    ['1',0],['2',0],['3',0],['.',0],['+',1],
+    ['0',0,2],['=',3,3]
+  ];
+  var KW = 67, GX = 6, GY = 5, KH = 48;
+  var pad = $('cpad');
+  (function build(){
+    var col = 0, row = 0;
+    keys.forEach(function(k){
+      var span = k[2] || 1;
+      var el = document.createElement('div');
+      el.className = 'ckey' + (k[1] === 1 ? ' op' : '') + (k[1] === 3 ? ' eq' : '');
+      el.textContent = k[0];
+      el.style.width = (KW * span + GX * (span - 1)) + 'px';
+      el.style.left = (col * (KW + GX)) + 'px';
+      el.style.top = (row * (KH + GY)) + 'px';
+      pad.appendChild(el);
+      col += span;
+      if (col >= 5) { col = 0; row++; }
+    });
+  })();
+
+  /* ── 改前 / 改后 ──
+     数值与固件一致：改前 max_width = 362-84-24 = 254，改后 = 362-28 = 334；
+     expr 右对齐、右边距 14 —— 所以左边界分别是 14+(362-14-254)=108 和 14+(362-14-334)=28。 */
+  var cback = $('cback'), cexpr = $('cexpr'), rf = $('rf');
+  var EXPR_W = { before: 254, after: 334 };
+  var CARD_RIGHT = 14 + 362;                 /* 卡片右边缘 x 坐标 = 376 */
+  function mode(v){
+    cback.classList.toggle('gone', v === 'after');
+    var w = EXPR_W[v];
+    cexpr.style.width = w + 'px';
+    rf.style.left = (CARD_RIGHT - 14 - w) + 'px';
+    rf.classList.toggle('on', v === 'after');
+    DBG.mode = v;
+    DBG.back = cback.classList.contains('gone') ? 0 : 1;
+    DBG.exprW = w;
+    DBG.rfLeft = CARD_RIGHT - 14 - w;
+  }
+  var seg = $('seg');
+  seg.addEventListener('click', function(e){
+    var b = e.target.closest('button');
+    if (!b) return;
+    [].forEach.call(seg.children, function(x){ x.classList.toggle('on', x === b); });
+    mode(b.dataset.v);
+  });
+  mode('before');
+
+  /* 标题保持固定，方便自检脚本 */
+  document.title = 'torch-preview|ready';
+})();
+</script>
+</body>
+</html>

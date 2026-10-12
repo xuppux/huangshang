@@ -1,0 +1,59 @@
+﻿msh />idle screen-off: DISABLED (kept awake)
+msh />idle screen-off: enabled (10s)
+msh />idle screen-off: DISABLED (kept awake)
+msh />switching to clock app...
+[288901] D/APP.FWK tshell: send msg[GUI_APP_MSG_RUN_APP] [clock] to gui_app_mbx tick:8749.
+[288937] I/APP.FWK.INT tshell: [clock]
+msh />[289037] D/APP.SCHE app_watc: ----------------app_schedule_task---------------start
+[289069] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_RUN_APP] tick:8749
+[289098] I/APP.SCHE app_watc: app[clock] do LOAD, 2004703c
+[289121] I/APP.FWK app_watc: finding clock in builtin apps...
+[289145] D/APP.SCHE app_watc: app[clock] tgt_state [LAUNCHED] -> [RUNNING]
+[289175] I/APP.SCHE app_watc: app[clock] do START, 2004703c
+[289198] I/APP.FWK.INT app_watc: [clock]
+[289215] D/APP.FWK app_watc: send msg[GUI_APP_MSG_OPEN_PAGE] [0x2004703c] to gui_app_mbx tick:8759.
+[289253] I/APP.SCHE app_watc: >>Execute msg[GUI_APP_MSG_OPEN_PAGE] tick:8759
+[289283] D/APP.SCHE app_watc: app[clock] create page[root] 20049fdc
+[289309] D/APP.SCHE app_watc: page[clock][root] tgt_state [CREATED] -> [RESUMED]
+[289339] D/APP.SCHE app_watc: Pause all app, and resume to clock app
+[289365] D/APP.SCHE app_watc: page[Main][root] tgt_state [RESUMED] -> [PAUSED]
+[289395] I/APP.SCHE app_watc: page[Main][root] do ONPAUSE, 2004b8d0
+[289435] I/APP.SCHE app_watc: page[clock][root] do ONSTART, 20049fdc
+service_reset_time:  124:0:1 - 12:0:9 - 1
+[301036] I/APP.SCHE app_watc: page[clock][root] do ONRESUME, 20049fdc
+STATE_PAUSED: clock[rotate_b] init
+app_clock_rotate_bg img_size:h:150,w:150 
+STATE_ACTIVE: clock[band] init
+STATE_ACTIVE: clock[band] resume
+watchface: rtc UNSET -> "?????????" hint shown
+[301580] I/APP.SCHE app_watc: Try setup trans-anim
+app_anim_buf_alloc: 0x602310b0 index 0 size 351000
+[301635] I/APP.ANI app_watc: buf = 602310b0
+[301693] I/APP.ANI app_watc: app_trans_animation_obj_create = 20054778
+app_anim_buf_alloc: 0x601db598 index 1 size 351000
+[301743] I/APP.ANI app_watc: buf = 601db598
+[302326] I/APP.ANI app_watc: app_trans_animation_obj_create = 200548f0
+[302357] I/APP.ANI app_watc: Start free run animation
+[302414] I/APP.ANI app_watc: app_trans_animation_setup end, cost=25ms
+
+[302453] I/APP.SCHE app_watc: Trans-anim setup done.
+[302475] D/APP.SCHE app_watc: --Pause app_schedule_task--
+[302497] D/APP.SCHE app_watc: app_schedule_task done.
+[313569] I/APP.ANI app_watc: free_run_ready 0 
+
+[315484] I/APP.ANI app_watc: wait_refr_task_cb 0
+
+[315507] I/APP.ANI app_watc: anim_free_run_ready 0 
+
+[315528] I/APP.ANI app_watc: app_trans_anim_free_run_clean
+
+[315552] I/APP.ANI app_watc: app_trans_animation_obj_destroy = 200548f0
+app_anim_buf_free: 0x601db598
+[315593] I/APP.ANI app_watc: app_trans_animation_obj_destroy = 20054778
+app_anim_buf_free: 0x602310b0
+[315646] I/APP.SCHE app_watc: Trans-anim finish, res=0
+[315668] D/APP.SCHE app_watc: --Resume app_schedule_task--
+msh />msh />watchface: rtc set -> "?????????" hint hidden
+rtc_now: 2026-09-20 19:15:03  (time()=1789931703)
+msh />Sun Sep 20 19:15:05 2026
+msh />

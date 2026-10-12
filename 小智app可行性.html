@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>把小智做成手表 App · 方案与可行性</title>
+<style>
+  :root{
+    --bg:#f4f6f9; --card:#fff; --ink:#1b2430; --ink2:#5b6b7c; --ink3:#8d9aa8;
+    --line:#e3e8ee; --blue:#2f6fed; --blue-bg:#eef4ff;
+    --green:#12a05f; --green-bg:#eafaf1;
+    --amber:#c17d10; --amber-bg:#fff7e6;
+    --red:#d24b4b; --red-bg:#fdeeee;
+    --violet:#7a4de8; --violet-bg:#f2eeff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.68 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 90px}
+
+  header{background:linear-gradient(135deg,#eaf1ff 0%,#f3f8ff 45%,#fdf6ec 100%);
+    border-bottom:1px solid var(--line);padding:38px 0 26px;margin-bottom:8px}
+  header .wrap{padding-bottom:0}
+  h1{font-size:27px;margin:0 0 8px;letter-spacing:-.4px}
+  .sub{color:var(--ink2);font-size:14.5px;margin:0 0 22px;max-width:780px}
+
+  h2{font-size:20px;margin:46px 0 6px;letter-spacing:-.3px}
+  h2 .cnt{font-size:13px;color:var(--ink3);font-weight:400;margin-left:8px}
+  h3{font-size:15.5px;margin:26px 0 8px}
+  p{margin:0 0 12px}
+  .lead{color:var(--ink2);font-size:14px;margin:0 0 16px;max-width:860px}
+  code{background:#eef2f7;border:1px solid #e0e7ef;border-radius:4px;
+    padding:1px 5px;font:12.5px/1.5 ui-monospace,Consolas,monospace;color:#2c3e50}
+  b.k{color:var(--ink)}
+
+  .verdict{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--blue);
+    border-radius:12px;padding:18px 20px;margin:22px 0}
+  .verdict .tag{display:inline-block;background:var(--blue-bg);color:var(--blue);
+    font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;margin-bottom:10px}
+  .verdict p:last-child{margin-bottom:0}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0}
+  .card h3{margin-top:0}
+
+  table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);
+    border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:14px 0;font-size:13.8px}
+  th{background:#f7f9fc;text-align:left;font-weight:600;font-size:12.5px;color:var(--ink2);
+    padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:10px 12px;border-bottom:1px solid #eef2f6;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.c,th.c{text-align:center}
+  .yes{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  .warn{color:var(--amber);font-weight:700}
+
+  .pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;
+    border-radius:999px;white-space:nowrap}
+  .pill.ok{background:var(--green-bg);color:var(--green)}
+  .pill.bad{background:var(--red-bg);color:var(--red)}
+  .pill.mid{background:var(--amber-bg);color:var(--amber)}
+  .pill.info{background:var(--blue-bg);color:var(--blue)}
+  .pill.pur{background:var(--violet-bg);color:var(--violet)}
+
+  .routes{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin:18px 0}
+  .route{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:16px 17px;position:relative;border-top:3px solid var(--line)}
+  .route.a{border-top-color:var(--ink3)}
+  .route.b{border-top-color:var(--amber)}
+  .route.c{border-top-color:var(--green)}
+  .route h4{margin:0 0 4px;font-size:16px}
+  .route .one{font-size:12.8px;color:var(--ink2);margin-bottom:12px}
+  .route dl{margin:0;font-size:13.4px}
+  .route dt{color:var(--ink3);font-size:12px;margin-top:9px}
+  .route dd{margin:2px 0 0}
+
+  .steps{counter-reset:s;margin:18px 0}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px 14px;margin:12px 0;position:relative;padding-left:56px}
+  .step::before{counter-increment:s;content:counter(s);position:absolute;left:18px;top:16px;
+    width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;
+    font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .step h4{margin:0 0 6px;font-size:15.5px}
+  .step .crit{background:var(--green-bg);border-radius:8px;padding:9px 12px;margin-top:10px;
+    font-size:13.4px;color:#0d6b40}
+  .step .crit b{color:var(--green)}
+  .step .risk{background:var(--red-bg);border-radius:8px;padding:9px 12px;margin-top:8px;
+    font-size:13.4px;color:#9c3333}
+  .step .risk b{color:var(--red)}
+
+  .qa{margin:16px 0}
+  .q{background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:13px 16px;margin:9px 0;font-size:14px}
+  .q .qq{font-weight:600;color:var(--ink);margin-bottom:5px}
+  .q .aa{color:var(--ink2);font-size:13.4px}
+  .q .aa b{color:var(--amber)}
+
+  ul{margin:8px 0 12px;padding-left:22px}
+  li{margin:5px 0}
+  li::marker{color:var(--ink3)}
+
+  .note{background:var(--amber-bg);border:1px solid #f2dfb8;border-radius:10px;
+    padding:13px 16px;margin:14px 0;font-size:13.6px;color:#7d5410}
+  .note b{color:var(--amber)}
+  .src{font-size:12.3px;color:var(--ink3);font-family:ui-monospace,Consolas,monospace;
+    word-break:break-all}
+  footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--line);
+    font-size:12.5px;color:var(--ink3)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>把小智做成手表上的一个 App</h1>
+    <p class="sub">方案拆解与可行性分析 · 目标平台 立创黄山派（SiFli SF32LB52-ULP）· 配套手机端小程序<br>
+    本文只做分析，不含任何代码改动。所有结论都标了出处，可逐条复核。</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="verdict">
+  <span class="tag">先说结论</span>
+  <p><b class="k">能做，但「把小智做成手表上的一个 app」这句话里藏着一个必须先解决的硬问题：这块手表没有 WiFi。</b>
+  它没有 WiFi 芯片，不是「没配好」，是芯片本身没有。所以「手表直接连网找小智服务器」这条路，
+  在这块板上走不通。所有方案的分岔，都是从<b>「网络从哪里来」</b>这一件事上分出来的。</p>
+  <p>剩下的部分反而比想象中乐观：<b class="k">音频采集、播放、功放、蓝牙协议栈，当前工程里其实已经开着</b>；
+  SDK 里还躺着一份现成的 BLE 对讲例程，明确支持这块板子，而且它已经用上了 Opus。
+  也就是说，难的不是「能不能出声、能不能传」，而是<b>「怎么把音频送到网络那头」</b>。</p>
+</div>
+
+<h2>一、「app」这个词，得先拆成三个东西<span class="cnt">这一步不拆清楚，后面全是白讨论</span></h2>
+
+<p class="lead">你说的是「app」，但在这块板子上，「app」有三种完全不同的落法，
+工作量差好几倍，而且互相之间不是「慢慢做就能升级过去」的关系——选错了要推倒重来。</p>
+
+<table>
+  <tr>
+    <th style="width:96px">理解</th>
+    <th>实际是什么</th>
+    <th style="width:150px">代价</th>
+  </tr>
+  <tr>
+    <td><b>① 换个固件</b></td>
+    <td>把手表整个刷成官方小智固件。开机就是小智，认不出手表界面了。<br>
+        官方 <code>78/xiaozhi-sf32</code> 已经支持黄山派，有现成固件包。</td>
+    <td><span class="pill mid">半天上手</span><br>但手表功能全没了</td>
+  </tr>
+  <tr>
+    <td><b>② 手表里的一个 app</b></td>
+    <td>手表的看时间、2048、手电筒都还在，蜂窝里多一个「小智」图标，点进去能对话。<br>
+        <b class="k">这应该才是你想要的那个。</b></td>
+    <td><span class="pill bad">最重</span><br>要在手表工程里把音频+网络+协议栈全建起来</td>
+  </tr>
+  <tr>
+    <td><b>③ 手表当话筒</b></td>
+    <td>手表只负责「采音 + 放音」，真正的脑子（语音识别、大模型、语音合成）放在手机小程序和服务器上。</td>
+    <td><span class="pill ok">中等</span><br>但前提是你能接受「必须连着手机」</td>
+  </tr>
+</table>
+
+<p><b>为什么要先分清 ① 和 ②？</b>因为 ① 看起来「官方都支持了，直接刷不就行了」，
+但它和 ② 是两个物种：① 刷完这块表就不再是手表了，你前面为表盘、2048、校时做的所有工作，
+在新固件里一个都不存在。<b class="k">① 适合「我就想要个小智音箱」，② 适合「我想要一块能叫小智的手表」。</b></p>
+
+<p>而 ③ 不是 ② 的简化版，它是<b>另一种架构</b>：把手表的职责砍到最小，
+把复杂度和算力都挪到手机上。它值不值得走，取决于你对「必须带手机」这件事的容忍度——
+而这恰恰又和「要不要支持 iPhone」缠在一起，第五节会展开。</p>
+
+<h2>二、先摸家底：这块板上现在有什么、缺什么</h2>
+
+<p class="lead">我把当前手表工程编译出来的最终配置（<span class="src">build_sf32lb52-lchspi-ulp_hcpu/rtconfig.h</span>，350 条宏定义）
+逐条筛了一遍。结果和「一块光秃秃的开发板」的印象差得挺远。</p>
+
+<h3>已经有的（不用你操心）</h3>
+<table>
+  <tr><th style="width:170px">能力</th><th style="width:110px" class="c">状态</th><th>说明</th></tr>
+  <tr><td>麦克风</td><td class="c"><span class="pill ok">板载</span></td>
+      <td>板子上自带了，不用外接</td></tr>
+  <tr><td>音频采集链路</td><td class="c"><span class="pill ok">已开启</span></td>
+      <td><code>RT_USING_AUDIO</code> · <code>BSP_ENABLE_AUD_PRC</code> · <code>BSP_AUDPRC_RX0_DMA</code>（录音走 DMA，不占 CPU）</td></tr>
+  <tr><td>音频播放链路</td><td class="c"><span class="pill ok">已开启</span></td>
+      <td><code>BSP_ENABLE_AUD_CODEC</code> · <code>BSP_AUDPRC_TX0_DMA</code></td></tr>
+  <tr><td>功放驱动</td><td class="c"><span class="pill ok">已开启</span></td>
+      <td><code>PA_USING_AW8155</code> · <code>AW8155_GPIO_PIN=42</code>（3W 功放，驱动已编入）</td></tr>
+  <tr><td>蓝牙协议栈</td><td class="c"><span class="pill ok">已开启</span></td>
+      <td><code>BSP_BLE_SIBLES</code> · <code>BLE_GAP_CENTRAL</code> · <code>BLE_GATT_CLIENT</code> · <code>BSP_BLE_CONNECTION_MANAGER</code><br>
+          连蓝牙连接管理都有，而且之前校时用的标准时间服务（CTS）也在</td></tr>
+  <tr><td>内存</td><td class="c"><span class="pill ok">够用</span></td>
+      <td>PSRAM <b>8MB</b>（<code>0x60000000</code>）· HCPU 片内 RAM <b>≈511KB</b> · 主代码区 Flash <b>8MB</b>（当前固件只用 2.57MB）</td></tr>
+  <tr><td>文件系统 / 界面</td><td class="c"><span class="pill ok">已开启</span></td>
+      <td><code>RT_USING_DFS</code> + FAT（存录音文件用得上）· LVGL v8 + FreeType 中文</td></tr>
+</table>
+
+<h3>缺的（这些是真正的工作量）</h3>
+<table>
+  <tr><th style="width:170px">缺口</th><th style="width:110px" class="c">性质</th><th>说明</th></tr>
+  <tr><td><b>WiFi</b></td><td class="c"><span class="pill bad">硬件没有</span></td>
+      <td>筛过 <code>rtconfig.h</code>，<b>0 个</b> WiFi 宏；板级配置里也没有。这颗芯片就不带 WiFi。<br>
+          <b class="k">这是整件事的分水岭。</b></td></tr>
+  <tr><td>lwIP 网络栈</td><td class="c"><span class="pill mid">未编入</span></td>
+      <td>当前固件里 <code>LWIP</code> / <code>SAL_</code> / <code>NETDEV</code> 全为 0。SDK 源码里有，只是没编进来。</td></tr>
+  <tr><td>WebSocket 客户端</td><td class="c"><span class="pill info">有源码</span></td>
+      <td>SDK 里躺着 <span class="src">rtos/rtthread/components/net/lwip/lwip-2.1.2/src/apps/websocket/websocket_client.c</span>。<br>
+          而且它的连接函数签名里<b>直接带 <code>bearer_token</code> 参数</b>——正好是小智协议要的鉴权头。<br>
+          这是个很好的信号：这条路有人铺过。</td></tr>
+  <tr><td>Opus 编解码</td><td class="c"><span class="pill mid">未编入</span></td>
+      <td><code>PKG_LIB_OPUS</code> 没开。但 SDK 的 BLE 对讲例程用了它，<b>且明确支持这块板</b>（见下）。</td></tr>
+  <tr><td>加密库 mbedTLS</td><td class="c"><span class="pill mid">未编入</span></td>
+      <td>小智服务器是 <code>wss://</code>（加密），没有 TLS 就握不上手。编入它会明显吃 Flash 和 RAM。</td></tr>
+  <tr><td>回声消除 AEC</td><td class="c"><span class="pill mid">未编入</span></td>
+      <td>麦克风和喇叭同时工作时，喇叭的声音会被自己听到。SDK 里有 WebRTC 的 AEC 模块，没开。<br>
+          <b>不做 AEC，「边放边说」会失灵</b>（小智支持这种对话模式）。</td></tr>
+  <tr><td>协处理器（ACPU）</td><td class="c"><span class="pill bad">52 没有</span></td>
+      <td>只有 58 系列才有 ACPU。这块 52 芯片没有，所以 <b>Opus 只能在主核用软件跑</b>，
+          跟界面渲染抢 CPU。</td></tr>
+  <tr><td><b>喇叭</b></td><td class="c"><span class="pill bad">要买</span></td>
+      <td>麦克风板载，但喇叭没有。板上功放是现成的（3W），你只需要<b>接一个喇叭上去</b>。<br>
+          这是整份清单里唯一要花钱的硬件，也是最便宜的一项。</td></tr>
+</table>
+
+<div class="note">
+  <b>一句话总结家底：</b>「说话」和「出声」的能力板子上已经具备，蓝牙也醒着。
+  真正缺的是<b>「上网」</b>这一环——而这一环缺的原因是硬件，不是配置。
+</div>
+
+<h3>SDK 里那份关键原料：BLE 对讲例程</h3>
+
+<p><span class="src">example/ble/talkback/</span> 这个例程的价值，比它名字听起来大得多。它的支持列表里<b>明确写着
+<code>sf32lb52-lchspi-ulp</code></b>（也就是你手上这块）。它做的事是：两块板子之间，用蓝牙实时传语音对讲。</p>
+
+<table>
+  <tr><th style="width:190px">它已经验证了什么</th><th>细节</th></tr>
+  <tr><td>这颗芯片能实时跑 Opus</td><td>这是最关键的。<b class="k">如果 Opus 跑不动，整个「手表做客户端」的路线就死了。</b>这份例程证明它跑得动。</td></tr>
+  <tr><td>需要的开关列得很全</td><td><code>CONFIG_BLUETOOTH</code> · <code>CONFIG_AUDIO</code> · <code>CONFIG_PKG_LIB_OPUS</code> ·
+      <code>CONFIG_PKG_USING_WEBRTC</code> · <code>CONFIG_WEBRTC_AECM</code>（回声消除）· <code>CONFIG_USING_BUTTON_LIB</code><br>
+      照着抄就行，不用自己摸。</td></tr>
+  <tr><td>真实参数会告诉你代价</td><td>源码里采样率默认被降到了 <b>8kHz</b>（注释里留着 16kHz），Opus 线程栈给了 <b>32KB</b>。<br>
+      这两条说明：主核软跑 Opus 是<b>要迁就算力</b>的——8kHz 的音质接近对讲机，不是音乐。</td></tr>
+</table>
+
+<div class="note">
+  <b>但这里有个坑，对「配合小程序」影响很大：</b>
+  talkback 走的是 <b>BLE 5.0 周期性广播</b>，不是普通的 GATT 连接。README 里白纸黑字写着
+  「本系统基于 BLE 5.0 周期性广播实现，<b>无需传统的 GATT 客户端和连接管理器功能</b>」。<br>
+  而手机小程序能做的是 <b>GATT 那一套</b>（连服务、读写特征值），<b>接不了周期性广播</b>。<br>
+  所以<b>不能直接把 talkback 拿来当「手表↔小程序」的通道</b>——要在手表上另外做一个 GATT 服务，
+  让小程序连上来。好消息是当前工程里 <code>BLE_GATT_CLIENT</code> 和连接管理器都是开着的，
+  之前做校时也已经走过一遍 GATT 服务的路，不算从零开始。
+</div>
+
+<h2>三、三条路线</h2>
+
+<p class="lead">下面三条，按「手表承担多少」排序。注意它们不是难度递增的同一个东西，
+而是三种不同的分工。</p>
+
+<div class="routes">
+
+  <div class="route a">
+    <h4>路线 A · 整机烧录官方固件</h4>
+    <div class="one">手表变成小智终端，不再是手表</div>
+    <dl>
+      <dt>要做什么</dt>
+      <dd>下载 <code>78/xiaozhi-sf32</code> 的黄山派固件包，烧进去。完事。</dd>
+      <dt>网络从哪来</dt>
+      <dd>蓝牙 PAN —— 手机共享网络给手表。相当于把手表当成一个蓝牙网卡。</dd>
+      <dt>要买的硬件</dt>
+      <dd>一个喇叭</dd>
+      <dt>最大风险</dt>
+      <dd><b>iPhone 用不了</b>（iOS 不支持蓝牙 PAN 共享网络），只有部分安卓机可以。<br>
+          而且手表原有的一切功能清零。</dd>
+      <dt>适合谁</dt>
+      <dd>「我就想要个能叫小智的音箱，不心疼这块表」</dd>
+    </dl>
+  </div>
+
+  <div class="route b">
+    <h4>路线 B · 手表里自己做一个完整客户端</h4>
+    <div class="one">手表自己连服务器，小智是蜂窝里的一个图标</div>
+    <dl>
+      <dt>要做什么</dt>
+      <dd>在现有手表工程里编入 lwIP + WebSocket + mbedTLS + Opus + AEC，
+          写小智协议（握手、监听、播放），再做一套界面。</dd>
+      <dt>网络从哪来</dt>
+      <dd>还是绕不开——没有 WiFi，只能走蓝牙 PAN。<b>和路线 A 一样卡在 iPhone 上。</b></dd>
+      <dt>要买的硬件</dt>
+      <dd>一个喇叭</dd>
+      <dt>最大风险</dt>
+      <dd>网络这一关<b>并没有因为自己写而变好</b>。花了大力气做协议栈，
+          结果发现 iPhone 用户还是用不了，这就很亏。<br>
+          另外主核要同时扛界面 + Opus + TLS，算力和功耗都紧张。</dd>
+      <dt>适合谁</dt>
+      <dd>只给安卓用户用，且愿意投入最大工作量</dd>
+    </dl>
+  </div>
+
+  <div class="route c">
+    <h4>路线 C · 手表当话筒，小程序当大脑</h4>
+    <div class="one">手表只管采音放音，联网交给手机</div>
+    <dl>
+      <dt>要做什么</dt>
+      <dd><b>手表侧：</b>做一个 GATT 服务，把 Opus 编码后的音频发给手机，
+          并接收手机回传的音频播放。不用 lwIP、不用 mbedTLS、不用 WebSocket。<br>
+          <b>小程序侧：</b>连手表、收发音频、自己连小智服务器（WebSocket）。</dd>
+      <dt>网络从哪来</dt>
+      <dd><b>手机自己的 WiFi / 4G。</b>手表根本不碰网络。</dd>
+      <dt>要买的硬件</dt>
+      <dd>一个喇叭</dd>
+      <dt>最大风险</dt>
+      <dd><b>iPhone 后台会把蓝牙掐断</b>——小程序一旦切到后台，
+          iOS 立刻暂停所有蓝牙读写，回调都不触发。所以必须<b>一直开着小程序在前台</b>。<br>
+          安卓侧还要处理定位权限（不给权限可能扫不到设备）。</dd>
+      <dt>适合谁</dt>
+      <dd>「我要的是手表上有个小智，手机在兜里当它的网卡，两者都接受」</dd>
+    </dl>
+  </div>
+
+</div>
+
+<h3>三条路线摆在一起看</h3>
+<table>
+  <tr>
+    <th style="width:150px">对比项</th>
+    <th class="c">A 换固件</th>
+    <th class="c">B 手表自建</th>
+    <th class="c">C 小程序中继</th>
+  </tr>
+  <tr><td>手表原有功能</td><td class="c"><span class="no">全丢</span></td><td class="c"><span class="yes">保留</span></td><td class="c"><span class="yes">保留</span></td></tr>
+  <tr><td>小智是个「app」吗</td><td class="c"><span class="no">不是</span></td><td class="c"><span class="yes">是</span></td><td class="c"><span class="yes">是</span></td></tr>
+  <tr><td>iPhone 能用吗</td><td class="c"><span class="no">不能</span></td><td class="c"><span class="no">不能</span></td><td class="c"><span class="yes">能</span></td></tr>
+  <tr><td>固件工作量</td><td class="c"><span class="yes">几乎零</span></td><td class="c"><span class="no">很大</span></td><td class="c"><span class="warn">中等</span></td></tr>
+  <tr><td>小程序工作量</td><td class="c">无</td><td class="c">无</td><td class="c"><span class="warn">中等</span></td></tr>
+  <tr><td>要不要自建服务器</td><td class="c">不用（官方）</td><td class="c">不用（官方）</td><td class="c">可以不用</td></tr>
+  <tr><td>Opus 在哪跑</td><td class="c">手表</td><td class="c">手表</td><td class="c">手表</td></tr>
+  <tr><td>主要卡点</td><td class="c">失去手表</td><td class="c"><b>网络绕不过</b></td><td class="c">蓝牙带宽 / 后台限制</td></tr>
+</table>
+
+<h2>四、网络这一环，单独说清楚</h2>
+
+<p class="lead">这一节是整份分析里最要紧的。因为它决定了上面三条路线<b>哪一条值得投入</b>。</p>
+
+<h3>为什么「让手表上网」这么难</h3>
+
+<p>通常给嵌入式设备联网有三条路：接 WiFi、插网线、用蜂窝模组（4G）。这块手表三条都不通：</p>
+
+<ul>
+  <li><b>WiFi</b> —— 芯片没有，硬件层面就没有，没有任何配置能变出来。</li>
+  <li><b>网线</b> —— 手表上没有网口。</li>
+  <li><b>4G 模组</b> —— 可以外挂，但要额外模块、额外天线、额外供电，手表那么点空间和电池基本撑不住。</li>
+</ul>
+
+<p>所以只剩<b>第四条路：借手机的网</b>。而借法有两种，这里就是分水岭：</p>
+
+<table>
+  <tr><th style="width:150px">借法</th><th>原理</th><th style="width:170px" class="c">iPhone 支持吗</th></tr>
+  <tr>
+    <td><b>蓝牙 PAN</b></td>
+    <td>手机把蓝牙当成一个网卡，共享互联网给手表。手表看起来就像插了网线。</td>
+    <td class="c"><span class="no">不支持</span><br><span class="src">iOS 无此能力</span></td>
+  </tr>
+  <tr>
+    <td><b>BLE 中继</b><br>（小程序方案）</td>
+    <td>不走网络共享。手表把数据通过蓝牙<b>发给手机上的一个小程序</b>，
+        小程序自己用手机的网络去连服务器，再把结果传回来。</td>
+    <td class="c"><span class="yes">支持</span><br><span class="src">BLE 是 iOS 允许的</span></td>
+  </tr>
+</table>
+
+<div class="verdict">
+  <span class="tag">这就是「配合小程序」的真正价值</span>
+  <p>很多人以为加个手机小程序是为了<b>好看、方便操作</b>。不是的。</p>
+  <p><b class="k">小程序真正的价值，是在「iPhone 不支持蓝牙网络共享」这堵墙旁边，开了一扇门。</b>
+  手表走 BLE 把音频交给手机，手机用自己正常的网络去连服务器——全程不需要手机的「网络共享」功能，
+  所以 iPhone 也拦不住。</p>
+  <p>反过来说：<b>如果你只打算自己用安卓机，那小程序就是多余的</b>，
+  直接走蓝牙 PAN（路线 A 或 B 的网络方式）就够了。所以「要不要小程序」这个问题，
+  本质上等于问你：<b class="k">「这东西只给我自己用，还是要给别人用、包括 iPhone 用户？」</b></p>
+</div>
+
+<h3>小程序的硬限制（这些不是建议，是平台规则）</h3>
+
+<table>
+  <tr><th style="width:170px">限制</th><th>具体数字</th><th>对你的影响</th></tr>
+  <tr><td>蓝牙单包大小</td><td>默认 23 字节，<b>实际可用 20 字节</b></td>
+      <td>音频必须切碎了发。频率要算清楚，否则会卡顿。</td></tr>
+  <tr><td>能不能调大单包</td><td><b>只有安卓能主动申请</b>（米 13 Pro 到 220 字节）<br><b>iOS 不让</b>，只能听系统安排</td>
+      <td>安卓和 iOS 的传输行为<b>不一样</b>，得分别处理。</td></tr>
+  <tr><td>切到后台</td><td>iOS：<b>所有蓝牙读写立即暂停</b>，连回调都不触发</td>
+      <td><b class="k">小程序必须一直开着前台。</b>用户切出去看个微信，对话就断了。</td></tr>
+  <tr><td>请求超时</td><td>切后台后 5 秒未完成的请求被强制中断</td>
+      <td>不能靠后台慢慢传。</td></tr>
+  <tr><td>WebSocket 数量</td><td>最多同时 5 个</td>
+      <td>够用，但要记得连服务器只能占 1 个。</td></tr>
+  <tr><td>服务器地址</td><td>必须 <b>HTTPS / wss</b>，且域名要<b>备案</b>并加入白名单</td>
+      <td><b class="k">这一条决定了你能不能「自己搭服务器」。</b>见下。</td></tr>
+  <tr><td>代码包大小</td><td>主包 ≤ 2MB，总计 ≤ 20MB</td>
+      <td>音频处理逻辑尽量精简，别塞大库。</td></tr>
+</table>
+
+<h3>服务器能不能自己搭？</h3>
+
+<p>可以，而且这是这条路上少有的「好消息」。小智设备端的协议是公开的，社区里有现成的服务端实现
+（<span class="src">xiaozhi-cpp-server</span>、<span class="src">xiaozhiclaw</span> 之类），
+甚至有人把它接到自己的 AI 助手上。设备侧需要的握手信息很明确：</p>
+
+<div class="card">
+  <h3>小智协议要点（设备端视角）</h3>
+  <ul>
+    <li><b>连接方式：</b>WebSocket，连接时带四个头 —— <code>Authorization: Bearer &lt;token&gt;</code>、
+        <code>Protocol-Version: 1</code>、<code>Device-Id</code>（设备 MAC）、<code>Client-Id</code>（设备 UUID）</li>
+    <li><b>握手：</b>连上后先发 <code>hello</code>，声明音频参数。设备端上行是
+        <b>Opus / 16000Hz / 单声道 / 60ms 一帧</b>；服务器下行回的可能是 24000Hz，设备要能重采样。</li>
+    <li><b>对话流程：</b>
+        <code>listen start</code>（开始录）→ 持续发 Opus 帧 → 服务器给识别结果 →
+        <code>tts start</code> → 收 Opus 帧播放 → <code>tts stop</code>。</li>
+    <li><b>监听模式：</b>有 <code>auto</code> / <code>manual</code> / <code>realtime</code> 三种。
+        <b class="k">其中 <code>realtime</code>（边听边说）需要回声消除（AEC）支持</b>——这就是前面说
+        <code>WEBRTC_AECM</code> 没编入会带来的直接后果。</li>
+    <li><b>还能控设备：</b>协议里带 <code>iot</code> 指令（就是 MCP 那一套），
+        理论上可以让小智控制手表本身——比如「把亮度调低」。</li>
+  </ul>
+</div>
+
+<div class="note">
+  <b>但「能自建」不等于「自建划算」。</b>小程序那一条硬规矩（必须备案域名 + HTTPS）意味着：
+  只要你不想用官方后台，就得<b>买域名、做备案、租服务器、配证书</b>。
+  备案本身就要走流程、要时间。<br>
+  <b>所以：</b>自己玩 → 直接用官方后台（<span class="src">xiaozhi.me</span>），零成本；
+  真要做成产品给别人用 → 自建这一步躲不掉，而且它是<b>行政流程</b>，不是技术问题，
+  得提前把时间算进去。
+</div>
+
+<h2>五、分阶段验证路线</h2>
+
+<p class="lead">不管最后选哪条路，验证顺序应该是<b>从里往外</b>，而不是一上来就搭完整链路。
+理由很实际：这条路上环节多，任何一个环节坏了都可能表现为「没声音」，
+如果一起上，你根本不知道该怀疑谁。<b class="k">每加一个新环节，都要保证上一次的成功还成立。</b></p>
+
+<div class="steps">
+
+  <div class="step">
+    <h4>第 0 步 · 先确认「能出声、能收声」</h4>
+    <p>目标：证明这块板的麦克风和喇叭是通的。不碰蓝牙、不碰网络。</p>
+    <p><b>怎么做：</b>用 SDK 自带的音频例程
+      （<span class="src">example/multimedia/audio/record</span> 录音，或
+      <span class="src">example/multimedia/audio/local_music</span> 放音）。
+      注意 <code>record</code> 例程的 README 里支持列表只写了 <code>eh-lb525</code>，
+      <b>没有列黄山派</b>——但它要的几个开关（AUDIO CODEC、AUDPRC、AUDIO MANAGER、FAT 文件系统）
+      你手上这份工程<b>基本都已经是开的</b>，所以挪过来改配置的成本不高。</p>
+    <div class="crit"><b>判据：</b>对着麦克风说话，录一段再放出来，能听清是自己说的。
+      听到了，这一步过。</div>
+    <div class="risk"><b>先决条件：</b>得先把喇叭接上。板上功放是现成的（3W），
+      但<b>喇叭本身要自己买一个</b>。没接喇叭，这一步没法验。</div>
+  </div>
+
+  <div class="step">
+    <h4>第 1 步 · 跑通现成的 BLE 对讲，验证「实时音频流」</h4>
+    <p>目标：证明这颗芯片能<b>一边采音、一边压缩、一边无线传、同时还能放音</b>——
+      这四件事同时发生，是整个小智方案的算力底线。</p>
+    <p><b>怎么做：</b>编译 <span class="src">example/ble/talkback</span>
+      （支持列表明确含 <code>sf32lb52-lchspi-ulp</code>）。按 README，<b>需要两块板子</b>对讲。
+      如果只有一块板，这一步就设法做完整验证——只能确认它能编译、能起来，听不到对讲效果。</p>
+    <div class="crit"><b>判据：</b>按着 PTT 键说话，另一块板子能听到。且<b>明显感觉不到卡顿或断续</b>。
+      注意它默认是 <b>8kHz</b>——听起来像对讲机是正常的，不是坏了。</div>
+    <div class="risk"><b>这一步是整条路的试金石。</b>如果对讲都卡，那后面接大模型只会更卡
+      （因为还多了网络延迟）。<b>它过不了，路线 B 和 C 就要重新想。</b></div>
+  </div>
+
+  <div class="step">
+    <h4>第 2 步 · 让电脑听见手表（用现成的 WebSocket 客户端）</h4>
+    <p>目标：把音频送到网络那头，<b>但不碰小智的完整协议</b>，先跑通「连得上、传得动」。</p>
+    <p><b>怎么做：</b>SDK 里那份 <span class="src">websocket_client.c</span> 编进来，
+      在电脑上起一个最简单的接收服务，让手表把 Opus 帧发过来，存成文件，用电脑放出来听。</p>
+    <div class="crit"><b>判据：</b>电脑上存下来的文件能放，而且听得出是你在手表那边说的。</div>
+    <div class="risk"><b>这里会撞上路线分岔。</b>手表要连网，就得先解决「网络从哪来」——
+      要么蓝牙 PAN（iPhone 不行），要么走路线 C 让小程序转发。
+      <b>所以这一步其实就是在逼你选路线。</b></div>
+  </div>
+
+  <div class="step">
+    <h4>第 3 步 · 对上小智协议，先只做「说」</h4>
+    <p>目标：接上小智服务器，把手表说的话变成文字回来。<b>先不做播放，只看文字。</b></p>
+    <p><b>怎么做：</b>按协议握手（四个头 + hello），发 <code>listen start</code>，
+      持续发 Opus 帧，在屏幕或串口上看服务器返回的识别文字。</p>
+    <div class="crit"><b>判据：</b>说「今天天气怎么样」，返回的文字里能认出这句话。
+      认出来了，说明编码、协议、服务器这一整条对上了。</div>
+    <div class="risk"><b>把「听」和「说」分开验</b>，是因为网络往返 + 音频播放两件事叠在一起时，
+      出问题根本分不清是传输慢还是播放慢。</div>
+  </div>
+
+  <div class="step">
+    <h4>第 4 步 · 补上「听」，做成完整对话</h4>
+    <p>目标：加上播放路径，做成一来一回的完整对话。</p>
+    <p><b>怎么做：</b>收服务器下行 Opus 帧 → 解码 → 送音频输出。
+      注意服务器下行可能是 24kHz，和上行 16kHz 不一样，<b>要重采样</b>。</p>
+    <div class="crit"><b>判据：</b>问一句，手表能出声回答，且回答内容对得上问题。</div>
+    <div class="risk"><b>这时才会暴露回声问题：</b>喇叭刚说完话，麦克风立刻把它听进去，
+      可能触发误识别。<b>要「边听边说」就必须开 AEC</b>（<code>CONFIG_WEBRTC_AECM</code>），
+      这也是最费算力的一项。</div>
+  </div>
+
+  <div class="step">
+    <h4>第 5 步 · 最后才是「做成 app」</h4>
+    <p>目标：把上面跑通的东西，搬进手表工程，做成蜂窝里的一个图标。</p>
+    <p><b>怎么做：</b>在蜂窝框架里注册一个新 app，界面沿用你现在这套风格。
+      交互上要处理几个实际问题：什么时候开始听（按键？点击？还是语音唤醒？）、
+      音量怎么调、网络断了怎么提示。</p>
+    <div class="crit"><b>判据：</b>点图标进去能用，退出后手表其他功能一切正常
+      （<b>内存没被吃掉</b>——Opus 栈 32KB 只是个开始，音频缓冲和网络缓冲都要占地方）。</div>
+    <div class="risk"><b>这一步的技术含量其实最低，但最容易翻车。</b>
+      因为前面各步都是「单独跑」，现在要和界面、其他 app、电源管理一起跑。
+      尤其<b>低功耗</b>：现在屏幕息屏深睡是调通的，加了常驻的音频和蓝牙之后，
+      <b>续航会掉多少，必须实测</b>。</div>
+  </div>
+
+</div>
+
+<div class="note">
+  <b>关于「一开始就语音唤醒」：</b>小智官方固件支持喊「小智小智」唤醒。但
+  <b>这块板上没有专用的唤醒芯片</b>，关键词检测要么在主核上一直跑（持续吃算力、吃电），
+  要么靠按键触发。<b class="k">建议第一版用「点一下屏幕」或「按一下键」来启动</b>，
+  把常驻唤醒放到最后再考虑，否则它会从一开始就拖住你的功耗和算力预算。
+</div>
+
+<h2>六、不断反问自己</h2>
+
+<p class="lead">下面这些是我在推演过程中反复卡住的地方。有些是技术问题，有些是「你到底想要什么」的问题。
+<b>其中带「先想清楚」标记的，是如果答不上来，后面几周可能白干的问题。</b></p>
+
+<h3>关于你真正想要什么</h3>
+
+<div class="qa">
+  <div class="q"><div class="qq">「app」到底指哪个？①换固件 / ②手表里的图标 / ③手表当话筒</div>
+    <div class="aa">这三个的工作量差好几倍，而且不能中途升级。<b>先想清楚。</b>
+      我的猜测是 ②，但你确认一下——如果你其实只想要个能对话的设备，那 ① 是最省事的选择。</div></div>
+
+  <div class="q"><div class="qq">这东西是「自己玩」还是「给别人用」？</div>
+    <div class="aa">这一个问题直接决定要不要自建服务器。自己玩→官方后台，零成本。
+      给别人用→域名、备案、服务器、证书全套上来，<b>而且备案是流程活，不是技术活，要提前排时间。</b>
+      这两条路的成本差一个数量级。</div></div>
+
+  <div class="q"><div class="qq">必须支持 iPhone 吗？</div>
+    <div class="aa">如果答案是「必须」，那<b>小程序中继（路线 C）是唯一的活路</b>，
+      因为 iPhone 不支持蓝牙网络共享，这条路被硬件和系统双双堵死。<br>
+      如果答案是「我自己用安卓就行」，那小程序就是多余的，直接走蓝牙 PAN，能省掉一整个环节。<b>先想清楚。</b></div></div>
+
+  <div class="q"><div class="qq">能接受「对话必须开着手机、且手机不能切后台」吗？</div>
+    <div class="aa">走路线 C 的话，iOS 一旦切后台就断蓝牙，回调都不触发。
+      所以用户得<b>把小程序一直摆在前台</b>，手表才连得上。这体验你能接受吗？<br>
+      对比一下：<b>手腕上抬起手说话，结果还得先掏手机点亮小程序</b>——这个动作会不会把「手表」的意义抵消掉？</div></div>
+
+  <div class="q"><div class="qq">能接受音质像对讲机吗？</div>
+    <div class="aa">talkback 例程默认降到 8kHz，这是为了省算力。小智协议本身要 16kHz。
+      主核软跑 Opus 能不能稳在 16kHz，<b>我没实测过，不能替你保证</b>。
+      如果只能跑 8kHz，音质会是「能听懂但发闷」。</div></div>
+
+  <div class="q"><div class="qq">响应速度要求多高？</div>
+    <div class="aa">完整链路是：说话 → 编码 → 传输 → 服务器识别 → 大模型 → 合成 → 传回 → 解码 → 播放。
+      光是网络往返通常就要一两秒，加上大模型思考，<b>答话前静默两三秒是正常的</b>。
+      这个延迟如果让你觉得「不如直接掏手机」，那这个项目的价值就要重新算。</div></div>
+</div>
+
+<h3>关于技术上的坑</h3>
+
+<div class="qa">
+  <div class="q"><div class="qq">没有 WiFi，你接受「必须配着手机」这个前提吗？</div>
+    <div class="aa">这不是选择，是硬约束。所有路线都得配手机。
+      区别只是「配手机干什么」——路线 A/B 让它当网卡，路线 C 让它当前台中继。</div></div>
+
+  <div class="q"><div class="qq">蓝牙带宽真的够吗？</div>
+    <div class="aa">小程序 BLE 默认单包可用 20 字节，而且 iOS 不让主动调大。
+      16kbps 的 Opus 换算下来需要约 100 个包/秒。这个数字和 BLE 的连接间隔叠加之后
+      到底稳不稳，<b>必须实测，我在这里只能标红，不能给你答案</b>。<br>
+      如果实测不够，退路是把采样率降到 8kHz（数据量减半）。</div></div>
+
+  <div class="q"><div class="qq">Opus 在主核跑，和界面渲染抢 CPU，会怎样？</div>
+    <div class="aa">这块 52 芯片<b>没有 ACPU 协处理器</b>（那是 58 系列才有的），
+      所以音频和界面只能挤在同一个核上。<br>
+      后果可能是：对话时界面动效掉帧，或者音频被界面卡出断续。
+      <b>这也是第 1 步要用 talkback 先验证的原因</b>——那是纯音频没有界面的最好情况，
+      真做 app 时只会更差。</div></div>
+
+  <div class="q"><div class="qq">内存够吗？PSRAM 8MB 听着很多。</div>
+    <div class="aa">但已经分出去不少了：LVGL 的图片缓存就占了 1.1MB，
+      再加上 FreeType 字体缓存。Opus 线程栈 32KB 不算大，
+      但音频缓冲、网络缓冲、TLS 握手时的临时内存都要留。<br>
+      <b>8MB 写在纸上很宽裕，实际会不会紧，要看编进 mbedTLS 之后的样子，得实测。</b></div></div>
+
+  <div class="q"><div class="qq">续航会掉多少？</div>
+    <div class="aa">现在息屏深睡是调通的。一旦加上常驻蓝牙 + 麦克风 + 音频处理，
+      深睡基本就没了。<b>具体掉多少我不知道，但「掉得很明显」是可以预期的。</b>
+      这是手表类设备最容易被低估的一项。</div></div>
+
+  <div class="q"><div class="qq">回声：喇叭的声音被自己麦克风听进去怎么办？</div>
+    <div class="aa">SDK 里有 WebRTC 的 AEC 模块但没编入。
+      <b>不做 AEC，「边放边说」这种对话模式会失灵</b>，只能做成「按一下说一句」的回合制。
+      回合制体验差一些，但省算力——这是个可接受的降级方案。</div></div>
+
+  <div class="q"><div class="qq">talkback 走的是 BLE 广播，不是 GATT，小程序连不上，怎么办？</div>
+    <div class="aa">这是我在读 README 时发现的一个隐蔽问题：talkback 用的是
+      BLE 5.0 周期性广播，<b>而小程序只能做 GATT 那一套，接不了广播</b>。<br>
+      所以路线 C 要<b>另外写一个 GATT 服务</b>。
+      好消息：当前工程里 GATT 相关开关都开着，之前做蓝牙校时已经走过一遍这条路，
+      <b>不是从零开始</b>。</div></div>
+
+  <div class="q"><div class="qq">我是不是在用「开发板的可行性」替代「产品的可行性」？</div>
+    <div class="aa">这是我最想提醒自己的一点。<b>「技术上做得到」和「做出来好用」是两回事。</b>
+      前面所有分析证明的都是前者。后者取决于：延迟能不能忍、音质能不能忍、
+      续航能不能忍、还有那个「必须掏手机点亮小程序」的动作能不能忍。<br>
+      <b>这几件事没有一件是我能替你判断的。</b></div></div>
+</div>
+
+<h2>七、如果让我给一个建议</h2>
+
+<div class="card">
+  <p><b>别急着写代码。先花最小的代价把最大的不确定性打掉。</b>具体就两件事：</p>
+  <ol>
+    <li><b>买个喇叭接上。</b>这是整份清单里唯一要花的硬件钱，也是所有验证的前提。
+      板上功放是现成的，接上就能用。</li>
+    <li><b>编译跑通 <span class="src">example/ble/talkback</span>。</b>
+      它明确支持你手上这块板，是「这颗芯片到底能不能扛实时语音」这个问题的<b>唯一权威答案</b>。
+      如果能过（哪怕只有一块板，先确认能编译、能起来、日志正常），
+      那路线 B 和 C 就是"难"而不是"不可能"；<br>
+      如果卡住了，说明问题出在算力或音频链路上——<b>那这时候再谈接大模型、谈小程序，都是空中楼阁。</b></li>
+  </ol>
+  <p style="margin-bottom:0">这两件事都不需要改现有手表工程一行代码，不影响你已经做好的表盘、2048、校时。
+  <b>做完再决定走哪条路线，比现在拍脑袋选一条要踏实得多。</b></p>
+</div>
+
+<h2>八、这份分析里我不确定的部分</h2>
+
+<p class="lead">既然你让我「不断反问自己」，那我把「我确实不知道」的部分单独列出来，
+免得上面那些表格看起来太确定。</p>
+
+<table>
+  <tr><th style="width:230px">事项</th><th>状态</th></tr>
+  <tr><td>主核能不能稳跑 16kHz Opus</td>
+      <td><span class="pill mid">未实测</span> 例程默认降到 8kHz，这是间接证据但不等同于结论。</td></tr>
+  <tr><td>BLE 中继的实际吞吐</td>
+      <td><span class="pill mid">未实测</span> 换算上勉强够，但 BLE 连接间隔、重传、多设备并存都会吃带宽，必须实测。</td></tr>
+  <tr><td>编入 mbedTLS 后的内存占用</td>
+      <td><span class="pill mid">未实测</span> 手上这份固件里 TLS 完全没编，没有参照物。</td></tr>
+  <tr><td>加入语音后的实际续航</td>
+      <td><span class="pill mid">未实测</span> 需要硬件实测功耗，无法从配置推断。</td></tr>
+  <tr><td>record 例程挪到黄山派要改多少</td>
+      <td><span class="pill mid">未验证</span> README 支持列表里没有本板，但所需开关大多已开着，估计改动不大，没实际试过。</td></tr>
+  <tr><td>小智官方后台的免费额度 / 限制</td>
+      <td><span class="pill bad">未核实</span> 我没查它的用量政策，如果长期使用，这块要另外算。</td></tr>
+  <tr><td>手电筒那颗灯到底亮不亮</td>
+      <td><span class="pill bad">只有你能确认</span> 和本报告无关，但之前一直悬着——串口能报成功，灯亮不亮只有眼睛能看见。</td></tr>
+</table>
+
+<footer>
+  分析对象：立创黄山派 SiFli SF32LB52-ULP · 手表工程 <span class="src">watch/lvgl/watch</span> ·
+  SDK <span class="src">sifli-sdk</span><br>
+  本文档只做分析，未修改任何工程代码，未烧录。
+  文中的「已开启 / 未编入」均来自当前工程编译产出的 <span class="src">rtconfig.h</span> 实读，
+  「支持列表」均来自各例程 <span class="src">README.md</span> 实读。
+</footer>
+
+</div>
+</body>
+</html>

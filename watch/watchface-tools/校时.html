@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>手表蓝牙校时</title>
+<style>
+  /* 亮色主题。这块表的使用场景是"抬腕点两下"，所以按钮一律做大，
+     手机上单手就能按到；信息层级用留白和字号区分，不靠颜色堆。 */
+  :root {
+    --bg:        #f5f6f8;
+    --card:      #ffffff;
+    --ink:       #1b1f24;
+    --ink-2:     #5b636e;
+    --ink-3:     #8b939e;
+    --line:      #e2e5ea;
+    --blue:      #1f6feb;
+    --blue-dark: #1a5fd0;
+    --green:     #1a7f4b;
+    --amber:     #b26a00;
+    --red:       #c0332c;
+    --mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    padding: 20px 16px 48px;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; }
+
+  h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: .3px; }
+  .sub { color: var(--ink-2); font-size: 14px; margin: 0 0 20px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .card h2 {
+    font-size: 15px; margin: 0 0 12px; color: var(--ink-2);
+    font-weight: 600; letter-spacing: .4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #eef2f7; color: var(--ink-2);
+    font-size: 12px; font-weight: 700;
+  }
+
+  button {
+    width: 100%;
+    border: 0; border-radius: 11px;
+    background: var(--blue); color: #fff;
+    font-size: 17px; font-weight: 600;
+    padding: 15px 16px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background .12s;
+  }
+  button:hover:not(:disabled) { background: var(--blue-dark); }
+  button:disabled { background: #c9ced6; cursor: not-allowed; }
+  button.ghost {
+    background: #fff; color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  button.ghost:hover:not(:disabled) { background: #f0f2f5; }
+  .row { display: flex; gap: 10px; margin-top: 10px; }
+  .row button { margin: 0; }
+
+  .clock {
+    font-family: var(--mono);
+    font-size: 40px; font-weight: 700; letter-spacing: -1px;
+    text-align: center; padding: 6px 0 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .clock-sub {
+    text-align: center; color: var(--ink-3); font-size: 13px;
+    font-family: var(--mono); margin-bottom: 12px;
+  }
+
+  .state {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; color: var(--ink-2);
+    padding: 10px 0 0;
+  }
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--ink-3); flex: none;
+  }
+  .dot.ok   { background: #21a05e; }
+  .dot.warn { background: #e0a22b; }
+  .dot.err  { background: #d3463c; }
+
+  .opt {
+    display: flex; align-items: center; gap: 9px;
+    font-size: 14px; color: var(--ink-2); margin-top: 14px;
+  }
+  .opt input { width: 18px; height: 18px; accent-color: var(--blue); }
+
+  #log {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.75;
+    background: #fbfbfc; border: 1px solid var(--line);
+    border-radius: 10px; padding: 12px;
+    max-height: 240px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all;
+    color: var(--ink-2);
+  }
+  #log .t  { color: var(--ink-3); }
+  #log .ok { color: var(--green); }
+  #log .er { color: var(--red); }
+  #log .wr { color: var(--amber); }
+
+  .banner {
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
+    font-size: 14px; line-height: 1.65;
+  }
+  .banner.bad  { background: #fdf2f1; border: 1px solid #f3d2cf; color: #7d2721; }
+  .banner.hint { background: #f2f7ff; border: 1px solid #d5e4fb; color: #27456f; }
+  .banner b { font-weight: 700; }
+
+  details { margin-top: 4px; }
+  summary {
+    cursor: pointer; font-size: 14px; color: var(--blue);
+    padding: 8px 0; outline: none;
+  }
+  details ol { margin: 6px 0 0; padding-left: 20px; color: var(--ink-2); font-size: 14px; }
+  details li { margin-bottom: 6px; }
+  code {
+    font-family: var(--mono); font-size: 12.5px;
+    background: #eef1f5; padding: 1px 5px; border-radius: 4px;
+    color: #2b3440;
+  }
+  .foot { color: var(--ink-3); font-size: 12.5px; text-align: center; margin-top: 22px; line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>手表蓝牙校时</h1>
+  <p class="sub">手表拔电后会丢时间（板上没有 RTC 备份电池）。用这个页面把电脑/手机的时间写进去。</p>
+
+  <div id="banner" class="banner hint" style="display:none"></div>
+
+  <!-- ── 1 ─────────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2><span class="num">1</span>连上手表</h2>
+    <button id="btnConnect">连接手表</button>
+    <div class="row">
+      <button class="ghost" id="btnAll">搜全部设备（找不到表时用）</button>
+    </div>
+    <div class="state">
+      <span class="dot" id="dot1"></span>
+      <span id="txt1">未连接</span>
+    </div>
+    <div class="opt">
+      <input type="checkbox" id="autoSync" checked>
+      <label for="autoSync">连上后自动写入时间</label>
+    </div>
+    <details>
+      <summary>手表上要先做什么？</summary>
+      <ol>
+        <li><b>没校过时的话，什么都不用做。</b>手表开机发现时间是假的（2024-01-01），
+            会自己开始广播。</li>
+        <li><b>等大约 15 秒</b>。开机后蓝牙协议栈在后台起来，表盘会先亮。
+            上划窗口那行状态字显示「蓝牙：广播中 · 用手机对时」才是可以连了；
+            这之前点「连接手表」会列出空列表。</li>
+        <li>如果手表时间是对的（或者自动广播已经超时），从屏幕顶部往下划叫出上划窗口，
+            点一下里面的 <b>BT</b> 按钮。</li>
+        <li>广播开 5 分钟会自动关，超时再点一次 BT 就行。<b>广播期间手表不会息屏</b>，
+            所以不用担心连到一半断开。</li>
+      </ol>
+    </details>
+  </div>
+
+  <!-- ── 2 ─────────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2><span class="num">2</span>写入时间</h2>
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="clock-sub" id="clockSub">等待连接…</div>
+    <button id="btnSync" disabled>把上面的时间写入手表</button>
+    <div class="row">
+      <button class="ghost" id="btnRead" disabled>读回手表时间</button>
+    </div>
+    <div class="state">
+      <span class="dot" id="dot2"></span>
+      <span id="txt2">尚未写入</span>
+    </div>
+  </div>
+
+  <!-- ── 3 ─────────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>日志</h2>
+    <div id="log"></div>
+  </div>
+
+  <details>
+    <summary>连不上 / 找不到手表怎么办？</summary>
+    <ol>
+      <li><b>先看手表上的状态字</b>（上划窗口里 BT 按钮下面那行）。必须写「广播中」
+          才是可以连的；写「启动中」就再等十几秒，写「就绪」说明广播没开，点一下 BT。</li>
+      <li>用 <b>Chrome 或 Edge</b> 打开这个页面。Safari 和 iOS 上的任何浏览器都<b>不支持</b>
+          网页蓝牙，手机端只有安卓的 Chrome 可以。</li>
+      <li>页面左下角显示 <code>file://</code> 时，浏览器可能不允许用蓝牙。
+          改用同目录的 <code>start_server.ps1</code> 起个本地服务再打开（会给出 localhost 地址）。</li>
+      <li>列表里找不到设备：先点「搜全部设备」。
+          <b>那里能看到 HS-Watch</b> = 手表在广播，是"按服务筛选"没匹配上；
+          <b>那里也看不到</b> = 手表根本没在广播（回第 1 条）。</li>
+      <li>连上又马上断开：广播中 / 已连接期间手表屏幕是保持常亮的，正常不会掉线。
+          把手表靠近电脑再试一次。</li>
+      <li>Windows 上反复失败：设置 → 蓝牙和其他设备 里如果有旧的 HS-Watch 记录，
+          先「删除设备」，然后关掉再打开蓝牙适配器，重新点「连接手表」。</li>
+    </ol>
+  </details>
+
+  <div class="foot">
+    走蓝牙官方标准 Current Time Service (0x1805)，<br>
+    所以 nRF Connect / LightBlue 这类通用 App 也能给这块表对时。
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ── 常量：蓝牙官方规定的 UUID ───────────────────────────────────────── */
+const UUID_CTS     = 0x1805;   /* Current Time Service        */
+const UUID_CT_CHAR = 0x2A2B;   /* Current Time 特征（可读可写） */
+
+const $ = id => document.getElementById(id);
+
+/* ── 日志 ─────────────────────────────────────────────────────────── */
+function log(msg, cls) {
+  const el = $("log");
+  const t = new Date();
+  const ts = String(t.getHours()).padStart(2,"0") + ":" +
+             String(t.getMinutes()).padStart(2,"0") + ":" +
+             String(t.getSeconds()).padStart(2,"0");
+  const line = document.createElement("div");
+  line.innerHTML = '<span class="t">' + ts + "</span>  " +
+                   '<span class="' + (cls || "") + '"></span>';
+  line.lastChild.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function banner(html, cls) {
+  const b = $("banner");
+  b.className = "banner " + cls;
+  b.innerHTML = html;
+  b.style.display = "";
+}
+
+function setState(n, cls, text) {
+  $("dot" + n).className = "dot " + cls;
+  $("txt" + n).textContent = text;
+}
+
+/* ── 环境自检 ─────────────────────────────────────────────────────── */
+if (!navigator.bluetooth) {
+  $("btnConnect").disabled = true;
+  $("btnAll").disabled = true;
+  banner("<b>这个浏览器没有网页蓝牙。</b>请用电脑上的 Chrome / Edge 打开这个文件，"
+       + "或者安卓的 Chrome（Safari 和 iOS 不支持）。"
+       + "<br><span style='color:#5b636e'>如果你是在聊天窗口的预览面板里看到这句，"
+       + "那是面板本身没有蓝牙权限 —— 不是页面坏了，用 Edge 打开同一个文件即可。</span>", "bad");
+  log("navigator.bluetooth 不存在，后续操作已禁用", "er");
+}
+
+if (location.protocol === "file:") {
+  banner("当前是 <code>file://</code> 打开的。多数情况下能用，"
+       + "但如果点「连接手表」报安全相关的错，就改用同目录的 "
+       + "<code>start_server.ps1</code> 起本地服务再打开。", "hint");
+}
+
+/* 适配器开关状态。Chrome/Edge 才有这个 API，取不到就跳过。
+ * 这条很有用：蓝牙没开的时候，requestDevice 的表现是"列表永远空着"，
+ * 和"手表没广播"长得一模一样。 */
+if (navigator.bluetooth && navigator.bluetooth.getAvailability) {
+  navigator.bluetooth.getAvailability().then(ok => {
+    if (ok) {
+      log("系统蓝牙适配器：可用（isSecureContext=" + isSecureContext + "）");
+    } else {
+      banner("<b>电脑/手机的蓝牙没打开。</b>打开它，然后刷新这个页面。", "bad");
+      log("getAvailability() 返回 false —— 蓝牙适配器不可用", "er");
+    }
+  }).catch(() => {});
+}
+
+/* ── 时间显示 ─────────────────────────────────────────────────────── */
+const WD = ["周日","周一","周二","周三","周四","周五","周六"];
+
+function tickClock() {
+  const d = new Date();
+  $("clock").textContent =
+      String(d.getHours()).padStart(2,"0") + ":" +
+      String(d.getMinutes()).padStart(2,"0") + ":" +
+      String(d.getSeconds()).padStart(2,"0");
+  $("clockSub").textContent =
+      d.getFullYear() + "-" +
+      String(d.getMonth()+1).padStart(2,"0") + "-" +
+      String(d.getDate()).padStart(2,"0") + "  " + WD[d.getDay()];
+}
+tickClock();
+setInterval(tickClock, 250);
+
+/* ── CTS 数据包 ─────────────────────────────────────────────────────
+ * 10 个字节，低字节在前（蓝牙规定）：
+ *   [0..1] 年 (uint16 LE)
+ *   [2] 月  [3] 日  [4] 时  [5] 分  [6] 秒
+ *   [7] 星期  1=周一 … 7=周日   ← 注意 JS 的 getDay() 是 0=周日
+ *   [8] 1/256 秒（0 就行）
+ *   [9] 调整原因  bit0=手动更新 → 写 1
+ */
+function buildPayload(d) {
+  const buf = new ArrayBuffer(10);
+  const v = new DataView(buf);
+  v.setUint16(0, d.getFullYear(), true);
+  v.setUint8(2, d.getMonth() + 1);
+  v.setUint8(3, d.getDate());
+  v.setUint8(4, d.getHours());
+  v.setUint8(5, d.getMinutes());
+  v.setUint8(6, d.getSeconds());
+  v.setUint8(7, d.getDay() === 0 ? 7 : d.getDay());
+  v.setUint8(8, 0);
+  v.setUint8(9, 1);
+  return buf;
+}
+
+function parsePayload(dv) {
+  const v = new DataView(dv.buffer, dv.byteOffset, dv.byteLength);
+  return {
+    year: v.getUint16(0, true), month: v.getUint8(2), day: v.getUint8(3),
+    hour: v.getUint8(4), min: v.getUint8(5), sec: v.getUint8(6),
+    dow: v.getUint8(7), reason: v.getUint8(9)
+  };
+}
+
+const p2 = n => String(n).padStart(2, "0");
+const fmt = t => t.year + "-" + p2(t.month) + "-" + p2(t.day) + " " +
+                 p2(t.hour) + ":" + p2(t.min) + ":" + p2(t.sec);
+
+/* ── 连接 ─────────────────────────────────────────────────────────── */
+let device = null, server = null, service = null, ch = null;
+
+/* 两种找设备的办法，失败时互为备份。
+ *
+ * 默认走 filters —— 浏览器直接按"广播里报过的服务 UUID"筛，
+ * 列表里只会有表，点一下就好。
+ *
+ * 为什么还留着 acceptAllDevices 这条路（2026-09-21 加的）：
+ *   filters 匹配的是**广播包里出现的** UUID。一旦广播包里那段不见了
+ *   （固件改坏了、或者某些 Windows 蓝牙栈不合并 scan response），
+ *   表现是"列表里一个设备都没有"，而且看不出是哪儿的问题 ——
+ *   设备和页面两边都很正常的样子。留个"搜全部设备"的口子，
+ *   就能一眼分清到底是"表没广播"还是"筛选没起作用"。 */
+async function pickDevice(useFilter) {
+  const opt = useFilter
+    ? {
+        filters: [
+          { services: [UUID_CTS] },        /* 标准 CTS（0x1805） */
+          { namePrefix: "HS-Watch" }        /* 兜底：按广播里的名字认 */
+        ],
+        optionalServices: [UUID_CTS]
+      }
+    : { acceptAllDevices: true, optionalServices: [UUID_CTS] };
+
+  return navigator.bluetooth.requestDevice(opt);
+}
+
+async function connect(useFilter) {
+  $("btnConnect").disabled = true;
+  $("btnAll").disabled = true;
+  $("btnSync").disabled = true;
+  $("btnRead").disabled = true;
+  setState(1, "warn", useFilter ? "正在选择设备…" : "正在扫描全部蓝牙设备…");
+
+  try {
+    device = await pickDevice(useFilter);
+
+    const dn = device.name || "(无名)";
+    log("已选择设备: " + dn + "   id=" + device.id, "ok");
+    setState(1, "warn", "已选择 " + dn + "，正在连接…");
+
+    device.addEventListener("gattserverdisconnected", onDisconnected);
+
+    server  = await device.gatt.connect();
+    log("GATT 已连接", "ok");
+
+    service = await server.getPrimaryService(UUID_CTS);
+    log("拿到时间服务 0x1805", "ok");
+
+    ch = await service.getCharacteristic(UUID_CT_CHAR);
+    log("拿到当前时间特征 0x2A2B", "ok");
+
+    setState(1, "ok", "已连接：" + dn);
+    $("btnSync").disabled = false;
+    $("btnRead").disabled = false;
+    $("btnConnect").textContent = "重新连接";
+    $("btnConnect").disabled = false;
+    $("btnAll").disabled = false;
+
+    if ($("autoSync").checked) {
+      log("自动对时已开启，立刻写入…");
+      await doSync();
+    }
+  } catch (e) {
+    setState(1, "err", "连接失败");
+    log("连接失败: " + e.name + " - " + e.message, "er");
+    explainError(e, useFilter);
+    $("btnConnect").disabled = false;
+    $("btnAll").disabled = false;
+  }
+}
+
+/* 把浏览器的错误名翻译成"下一步该干什么"。
+ * 纯报错名（NotFoundError）对用户毫无意义，得说清楚是手表那边还是电脑那边。 */
+function explainError(e, useFilter) {
+  if (e.name === "NotFoundError") {
+    if (useFilter) {
+      log("提示：按服务筛选没找到设备。先点下面那个「搜全部设备」——"
+        + "如果那样能看到 HS-Watch，就是广播里没带服务 UUID（固件问题）。", "wr");
+    } else {
+      log("提示：连全部设备也扫不到。那就是手表没在广播 ——"
+        + "看手表上划窗口那行状态字，得是「蓝牙：广播中 · 用手机对时」。", "wr");
+    }
+  } else if (e.name === "NetworkError") {
+    log("提示：设备在列表里但连不上。逐条排查："
+      + "① 手表是不是刚息屏了（息屏=射频断，点一下屏幕叫醒再看状态字）；"
+      + "② Windows 设置 → 蓝牙里如果有旧的 HS-Watch 记录，先删掉；"
+      + "③ 关掉再打开电脑蓝牙，重新连一次。", "wr");
+  } else if (e.name === "SecurityError") {
+    log("提示：安全上下文问题。别双击 html 打开，用同目录 start_server.ps1 "
+      + "起本地服务，再用它给出的 localhost 地址打开。", "wr");
+  } else if (e.name === "InvalidStateError") {
+    log("提示：上次的连接还没释放。等两三秒再点，或者刷新页面重来。", "wr");
+  }
+}
+
+$("btnConnect").addEventListener("click", () => connect(true));
+$("btnAll").addEventListener("click", () => connect(false));
+
+function onDisconnected() {
+  log("连接已断开", "wr");
+  setState(1, "err", "已断开（手表息屏或离远了）");
+  setState(2, "warn", "未连接");
+  $("btnSync").disabled = true;
+  $("btnRead").disabled = true;
+  $("btnConnect").disabled = false;
+  $("btnAll").disabled = false;
+  ch = null;
+}
+
+/* ── 写入 ─────────────────────────────────────────────────────────── */
+async function doSync() {
+  if (!ch) { log("还没连接", "er"); return; }
+
+  const now = new Date();
+  const buf = buildPayload(now);
+  const want = now.getFullYear() + "-" + p2(now.getMonth()+1) + "-" + p2(now.getDate())
+             + " " + p2(now.getHours()) + ":" + p2(now.getMinutes()) + ":" + p2(now.getSeconds());
+
+  setState(2, "warn", "正在写入…");
+  try {
+    await ch.writeValue(buf);
+    log("已写入: " + want, "ok");
+    setState(2, "ok", "已写入 " + want);
+
+    /* 立刻读回来核对 —— 和固件那边"写完立刻回读 RTC"是同一个习惯：
+     * 不靠"应该成功了"，要看真实值。 */
+    await new Promise(r => setTimeout(r, 400));
+    await doRead(true);
+  } catch (e) {
+    setState(2, "err", "写入失败");
+    log("写入失败: " + e.name + " - " + e.message, "er");
+    if (e.name === "NotAllowedError") {
+      log("提示：这个特征不允许写。如果固件里没有打开 CTS 时间服务就是这种现象。", "wr");
+    }
+  }
+}
+
+$("btnSync").addEventListener("click", doSync);
+
+/* ── 读回 ─────────────────────────────────────────────────────────── */
+async function doRead(quiet) {
+  if (!ch) { log("还没连接", "er"); return; }
+
+  try {
+    const dv = await ch.readValue();
+    /* 只打前 10 个字节：CTS 当前时间就是 10 字节 */
+    const t = parsePayload(dv);
+    const s = fmt(t);
+    if (!quiet) { log("手表时间: " + s, "ok"); }
+
+    /* 和电脑时间比对。差得离谱说明写入没生效，或者手表 RTC 又被清了。 */
+    const mine = new Date();
+    const diff = Math.abs(mine - new Date(
+        t.year, t.month - 1, t.day, t.hour, t.min, t.sec)) / 1000;
+
+    if (diff <= 3) {
+      setState(2, "ok", "核对一致：" + s);
+      log("核对一致（与电脑相差 " + diff.toFixed(0) + " 秒）", "ok");
+    } else {
+      setState(2, "warn", "手表时间是 " + s + "，与电脑差 " + Math.round(diff) + " 秒");
+      log("注意：手表与电脑相差 " + Math.round(diff) + " 秒", "wr");
+    }
+  } catch (e) {
+    log("读取失败: " + e.name + " - " + e.message, "er");
+  }
+}
+
+$("btnRead").addEventListener("click", () => doRead(false));
+
+log("页面就绪。手表上先开 BT，再点上面的「连接手表」。");
+</script>
+</body>
+</html>

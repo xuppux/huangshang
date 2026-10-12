@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>黄山派 watch 界面预览 · 浏览器复刻</title>
+<style>
+  :root{
+    --bg:#eef1f6; --card:#ffffff; --line:#e2e7ef; --line2:#d3dae6;
+    --text:#141922; --muted:#697586; --dim:#94a0b0;
+    --accent:#00a6c4; --accent2:#0e7490; --warn:#b45309; --ok:#0f766e;
+    --scr-w:390; --scr-h:450; --s:1.25;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font:14px/1.65 -apple-system,"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1230px;margin:0 auto;padding:26px 20px 60px}
+
+  /* ---------- 顶部说明 ---------- */
+  header{margin-bottom:22px}
+  h1{font-size:21px;margin:0 0 4px;letter-spacing:.2px}
+  .sub{color:var(--muted);font-size:13px}
+  .notice{
+    margin-top:14px;padding:12px 15px;border-radius:9px;
+    background:#fffbeb;border:1px solid #fde68a;color:#78350f;font-size:13px;
+  }
+  .notice b{color:#92400e}
+
+  /* ---------- 布局 ---------- */
+  .cols{display:grid;grid-template-columns:minmax(0,548px) minmax(0,1fr);gap:26px;align-items:start}
+  @media (max-width:1010px){.cols{grid-template-columns:1fr}}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px}
+  .card-hd{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:650;font-size:13.5px;
+           display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .card-bd{padding:16px}
+
+  /* ---------- 手表外框 ---------- */
+  .deviceCol{position:sticky;top:20px;z-index:5}
+  .bezelOuter{
+    background:linear-gradient(160deg,#2a2f3a,#12151b 55%,#232833);
+    border-radius:34px;padding:13px;box-shadow:0 14px 34px rgba(16,24,40,.22),0 2px 6px rgba(16,24,40,.10);
+    width:max-content;margin:0 auto;position:relative;
+  }
+  .bezelInner{background:#05070a;border-radius:24px;padding:0;overflow:hidden;position:relative}
+  .frameWrap{width:calc(var(--scr-w) * var(--s) * 1px);height:calc(var(--scr-h) * var(--s) * 1px);
+             position:relative;overflow:hidden;border-radius:22px}
+  .stage{width:calc(var(--scr-w) * 1px);height:calc(var(--scr-h) * 1px);
+         position:absolute;left:0;top:0;transform-origin:0 0;
+         transform:scale(var(--s));background:#000;overflow:hidden}
+  .crown{position:absolute;right:-5px;top:150px;width:5px;height:52px;border-radius:0 4px 4px 0;
+         background:linear-gradient(90deg,#3b4250,#20252e)}
+
+  /* ---------- 屏幕内通用 ---------- */
+  .screenPane{position:absolute;inset:0;display:none}
+  .screenPane.on{display:block}
+
+  /* 蜂窝 */
+  /* 注意：图标 left/top 用的是「屏幕坐标」（已含 pan），所以这一层本身
+     绝对不能再 translate，否则会平移两次。见 drawMenu() */
+  #menuGrid{position:absolute;inset:0;overflow:visible}
+  .hx{position:absolute;border-radius:50%;overflow:hidden}
+  .hx img{display:block;width:100%;height:100%;image-rendering:auto}
+  .hx.dummy{opacity:.5}
+  .hx.focus::after{content:"";position:absolute;inset:-3px;border-radius:50%;
+                   border:2px solid rgba(0,229,255,.75);box-shadow:0 0 14px rgba(0,229,255,.5)}
+  .hx.real{cursor:pointer}
+  .hx.real:hover::after{content:"";position:absolute;inset:-2px;border-radius:50%;
+                        border:2px solid rgba(255,255,255,.5)}
+  /* 标记坏资源 */
+  .hx.broken{outline:2px dashed #ef4444;outline-offset:1px;border-radius:50%}
+  .hx.broken::before{content:"坏";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    z-index:3;color:#fff;background:#dc2626;font-size:11px;font-weight:700;line-height:1;
+    padding:2px 5px;border-radius:4px;font-style:normal}
+  body.nomark .hx.broken{outline:none}
+  body.nomark .hx.broken::before{display:none}
+  .sw{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);
+      border:1px solid var(--line2);background:#fff;border-radius:8px;padding:6px 11px;cursor:pointer;
+      user-select:none;font-family:inherit}
+  .sw input{margin:0;accent-color:var(--accent)}
+  .badGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:10px}
+  .bad{background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:7px 5px;text-align:center}
+  .bad img{width:46px;height:46px;display:block;margin:0 auto 4px;background:#000;
+           border-radius:6px;object-fit:contain}
+  .bad .n{font-size:9.5px;color:#991b1b;word-break:break-all;line-height:1.25}
+  .bad .g{font-size:13px;color:#b91c1c;font-weight:700}
+  .menuHint{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:#7b8794;
+            font-size:11px;pointer-events:none;letter-spacing:.3px}
+
+  /* 表盘 —— 两层都必须撑满屏幕，否则 overflow:hidden 会把内容裁没 */
+  .dialLayer{position:absolute;inset:0;overflow:hidden}
+  .handLayer{position:absolute;inset:0;overflow:hidden}
+
+  /* 立方体 */
+  .cubeWrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;perspective:820px}
+  .cube{width:300px;height:300px;position:relative;transform-style:preserve-3d;animation:spin 16s linear infinite}
+  @media (prefers-reduced-motion: reduce){ .cube{animation:none;transform:rotateX(-18deg) rotateY(36deg)} }
+  @keyframes spin{
+    0%{transform:rotateX(-18deg) rotateY(0)}
+    100%{transform:rotateX(-18deg) rotateY(360deg)}
+  }
+  .face{position:absolute;width:300px;height:300px;border:1px solid rgba(0,229,255,.35);
+        display:flex;align-items:center;justify-content:center;background:#0a0d12;overflow:hidden}
+  .face img{width:100%;height:100%;object-fit:cover}
+  .f1{transform:translateZ(150px)} .f2{transform:rotateY(90deg) translateZ(150px)}
+  .f3{transform:rotateY(180deg) translateZ(150px)} .f4{transform:rotateY(-90deg) translateZ(150px)}
+  .f5{transform:rotateX(90deg) translateZ(150px)} .f6{transform:rotateX(-90deg) translateZ(150px)}
+
+  /* hello world */
+  .helloWrap{position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center}
+  .helloWrap span{color:#fff;font-size:44px;font-weight:600;letter-spacing:.5px;
+                  font-family:-apple-system,"Segoe UI",system-ui,sans-serif}
+
+  /* ---------- 控件 ---------- */
+  .tabs{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:0}
+  .tab{border:1px solid var(--line2);background:#fff;color:var(--muted);border-radius:8px;
+       padding:6px 11px;font-size:12.5px;cursor:pointer;transition:.14s;font-family:inherit}
+  .tab:hover{border-color:#b8c4d6;color:var(--text)}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .tabRow{margin-top:12px}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;white-space:nowrap;background:#f8fafc}
+  td code,code.k{font-family:"Cascadia Code",Consolas,monospace;font-size:11.5px;
+                 background:#eef2f7;padding:1px 5px;border-radius:4px;color:#0f4c5c}
+
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12.5px}
+  .kv dt{color:var(--muted);white-space:nowrap}
+  .kv dd{margin:0;font-family:"Cascadia Code",Consolas,monospace;font-size:11.5px;color:#0f4c5c}
+
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+  .pill.real{background:#d1fae5;color:#065f46}
+  .pill.fake{background:#fee2e2;color:#991b1b}
+  .pill.info{background:#e0f2fe;color:#075985}
+
+  ul.tight{margin:6px 0 0;padding-left:19px}
+  ul.tight li{margin:3px 0}
+  .hintline{color:var(--dim);font-size:11.5px;margin-top:8px}
+  .warnbox{padding:10px 13px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;
+           color:#7f1d1d;font-size:12.5px}
+
+  /* 资产总览 */
+  .assets{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:8px}
+  .asset{background:#f8fafc;border:1px solid var(--line);border-radius:8px;padding:7px 5px;text-align:center}
+  .asset img{max-width:100%;max-height:46px;display:block;margin:0 auto 4px}
+  .asset .nm{font-size:9.5px;color:var(--muted);word-break:break-all;line-height:1.25}
+  .asset .dm{font-size:9px;color:var(--dim);font-family:monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>黄山派手表界面 · 浏览器预览</h1>
+  <div class="sub">
+    立创·黄山派（SF32LB52-ULP）官方 <code class="k">lvgl/watch</code> 示例工程 ·
+    屏幕 390 × 450 · 用工程自带的真实图片资源，按源码里的布局算法在浏览器里复刻
+    &nbsp;·&nbsp;<a href="icons-audit.html" style="color:#0e7490">图标资源体检</a>
+  </div>
+  <div class="notice">
+    <b>先说清楚这是什么。</b>
+    这是<b>在浏览器里按源码常量重画的预览</b>，不是那套固件本体跑出来的画面。
+    布局公式、图标顺序、缩放规则、用到的图片文件，全部逐条对着源码抄（每条都标了出处）；
+    但底层的 LVGL 渲染引擎、GPU 旋转、字体栅格化跟真机不可能一模一样。
+    <br>它的用处是：<b>烧板之前先知道长什么样、点进去有什么、哪些是空壳。</b>
+  </div>
+</header>
+
+<div class="cols">
+
+  <!-- ================= 左：表 ================= -->
+  <div class="deviceCol">
+    <div class="bezelOuter">
+      <div class="bezelInner">
+        <div class="frameWrap"><div class="stage" id="stage">
+
+          <!-- 屏幕 1：蜂窝菜单 -->
+          <div class="screenPane on" id="pane-menu">
+            <div id="menuGrid"></div>
+            <div class="menuHint" id="menuHint">拖动 / 滚轮移动 · 点中间图标进入</div>
+          </div>
+
+          <!-- 屏幕 2：时钟 -->
+          <div class="screenPane" id="pane-clock">
+            <div class="dialLayer" id="dialBg"></div>
+            <div class="handLayer" id="dialHands"></div>
+          </div>
+
+          <!-- 屏幕 3：Hello World -->
+          <div class="screenPane" id="pane-hello">
+            <div class="helloWrap"><span>Hello World</span></div>
+          </div>
+
+          <!-- 屏幕 4：立方体 -->
+          <div class="screenPane" id="pane-cube">
+            <div class="cubeWrap"><div class="cube" id="cube"></div></div>
+          </div>
+
+        </div></div>
+      </div>
+      <div class="crown"></div>
+    </div>
+
+    <div class="tabRow">
+      <div class="tabs" id="tabs"></div>
+      <label class="sw" style="margin-top:9px">
+        <input type="checkbox" id="markBad" checked> 标出坏掉的图标资源
+      </label>
+    </div>
+    <div class="hintline" id="paneNote"></div>
+  </div>
+
+  <!-- ================= 右：说明 ================= -->
+  <div>
+    <div class="card">
+      <div class="card-hd">
+        <span id="infoTitle">当前：蜂窝主菜单</span>
+        <span class="pill info" id="infoPill">骨架</span>
+      </div>
+      <div class="card-bd" id="infoBody"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-hd"><span>蜂巢布局常量（源码逐条核对）</span>
+        <span class="pill info">app_mainmenu.c</span></div>
+      <div class="card-bd">
+        <dl class="kv">
+          <dt>图标外半径</dt><dd>ICON_OUTER_RADIUS = max(390,450) / 9 = <b>50</b></dd>
+          <dt>图标内半径</dt><dd>ICON_INNER_RADIUS = 50 × 8 / 9 = <b>44</b></dd>
+          <dt>格点数</dt><dd>MAX_APP_ROW_NUM × MAX_APP_COL_NUM = 16 × 16</dd>
+          <dt>六边形格距</dt><dd>相邻图标中心距 = 2 × 50 = <b>100</b>（正好相切）</dd>
+          <dt>格点坐标</dt><dd>x = (col−row) × cos60 × R &gt;&gt; 14<br>y = (col+row) × sin60 × R &gt;&gt; 14</dd>
+          <dt>裁剪圆</dt><dd>limit_round2(225, 屏幕中心)</dd>
+          <dt>裁剪矩形</dt><dd>374 × 430（居中）</dd>
+          <dt>间距补偿</dt><dd>r ≥ 6 时 r −= 6，否则隐藏</dd>
+        </dl>
+        <div class="hintline">
+          图标进入屏幕边缘时会被裁圆 + 裁方框，同时按比例缩小并往中心推 —— 这就是蜂巢的鱼眼感。
+          距离中心 ≥ 275 px 的图标会被整个隐藏。
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-hd"><span>图标从哪来的：真实 vs 占位</span></div>
+      <div class="card-bd" id="iconAudit"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px;border-color:#fecaca">
+      <div class="card-hd" style="border-color:#fecaca">
+        <span style="color:#991b1b">⚠ 实测发现：8 张图标资源是坏的</span>
+        <span class="pill fake">上游问题</span>
+      </div>
+      <div class="card-bd">
+        <p style="margin:0 0 4px">
+          <code class="k">src/resource/images/common/ezip/</code> 里有 <b>8 张 PNG 的内容不是图标，
+          而是「思澈科技」四个字的字形切片</b> —— 思 / 澈 / 科 / 技 各出现两次，
+          显然是字体图集生成时把这些文件覆盖掉了。
+        </p>
+        <p style="margin:8px 0 0">
+          后果：真机上这 8 个格位显示的是汉字，不是日历/相机/电话图标。
+        </p>
+        <div class="badGrid" id="badList"></div>
+        <div class="hintline">
+          交叉核对过：立创桌面版与 SDK 里的 <code class="k">watch</code>(v8)、
+          <code class="k">watch_v9</code> 三份副本的这些文件<b>逐字节完全一致</b>
+          —— 是上游发出来就坏的，不是下载损坏。
+          61 张里坏 8 张，其余 53 张正常。
+          <br><a href="icons-audit.html" style="color:#0e7490">→ 打开「图标资源体检」，61 张逐张看</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-hd"><span>工程全部图片资源（105 张）</span>
+        <span class="pill info">src/resource/images</span></div>
+      <div class="card-bd">
+        <div id="assets"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ============================================================
+   资源路径：指向工程里真实的 PNG（相对本文件）
+   ============================================================ */
+const RES = "../lvgl/watch/src/resource/images/common/";
+const ezip  = n => RES + "ezip/"       + n;
+const large = n => RES + "large_ezip/" + n;
+const noez  = n => RES + "no_ezip/"    + n;
+
+/* ============================================================
+   布局常量 —— 全部来自 app_mainmenu.c
+   ============================================================ */
+const HOR = 390, VER = 450;                       // LCD_HOR_RES_MAX / LCD_VER_RES_MAX
+const R_OUT = Math.floor(Math.max(HOR,VER)/9);    // 50  (L60)
+const R_IN  = Math.floor(R_OUT*8/9);              // 44  (L67)
+const D_OUT = R_OUT*2;                            // 100
+const MAXR  = 16, MAXC = 16;                      // L71-72
+const PAGE_W = D_OUT*(MAXC-1) + HOR;              // 1890 (L80)
+const PAGE_H = Math.floor(PAGE_W*10/7);           // 2700 (L83)
+const C0X = PAGE_W>>1, C0Y = 0;                   // L86-87
+
+const LIMIT_W = HOR-16, LIMIT_H = VER-20;         // 374 x 430 (L93-94)
+const PX1 = Math.floor((HOR-LIMIT_W)/2), PY1 = Math.floor((VER-LIMIT_H)/2);
+const PX2 = PX1 + LIMIT_W - 1,           PY2 = PY1 + LIMIT_H - 1;
+const LIMIT_R = VER>>1;                           // 225 (L96)
+const GAP = R_OUT - R_IN;                         // 6   (L655)
+
+const CTR_X = HOR>>1, CTR_Y = VER>>1;             // 195,225
+
+/* 整数三角：LVGL 的 lv_trigo_* 返回 sin/cos × 32767，再 >> (LV_TRIGO_SHIFT-1)=14 */
+const TRIGO = 32767;
+const COS60 = Math.round(Math.cos(60*Math.PI/180)*TRIGO);  // 16384
+const SIN60 = Math.round(Math.sin(60*Math.PI/180)*TRIGO);  // 28378
+
+/* ---------- layout_get_icon_col_row_by_idx (L362-436) ---------- */
+function idxToColRow(idx){
+  let col, row;
+  if(idx !== 0){
+    let total=0, hexR=0, hexIcons=1;
+    while(total + hexIcons - 1 < idx){ total += hexIcons; hexR++; hexIcons = hexR*6; }
+    const oneEdge = hexR + 1;
+    row = 0; col = -hexR;
+    for(let i=0;i<hexIcons;i++){
+      if(total + i === idx) break;
+      switch(Math.floor(i/(oneEdge-1))){
+        case 0: col++; row--; break;
+        case 1: col++;       break;
+        case 2: row++;       break;
+        case 3: col--; row++; break;
+        case 4: col--;       break;
+        case 5: row--;       break;
+      }
+    }
+  } else { col = 0; row = 0; }
+  return { col: col + (MAXC>>1), row: row + (MAXR>>1) };
+}
+
+/* ---------- get_icons_init_coordinate (L587-591) ---------- */
+function pivotOf(row, col){
+  const x = (((col - row) * COS60 * R_OUT) >> 14) + C0X;
+  const y = (((col + row) * SIN60 * R_OUT) >> 14) + C0Y;
+  return {x, y};
+}
+
+/* ============================================================
+   图标清单 —— 顺序严格照 app_mainmenu_read_app_icons()
+    BuiltinAppTab 链接顺序（用板子上的 calc_menu 命令实测得出，2026-09-19）：
+      calculator → clock → hello_world → app_mainmenu(Main) → rotation3d
+    为什么 calculator 排在最前面：它是最新加进去的目标文件，链接器把它放到了
+    段的最前头。这不影响它落哪一格 —— 蜂窝的格子是按「遍历顺序」分配的，
+    clock 被硬钉在第 0 格，calculator 排在它后面就拿到第 1 格。
+    实测结果： idx1 = calculator（中心时钟右边第一格）
+               idx2 = hello_world        idx3 = rotation3d
+    之后接 #if 1 的 56 个 demo 占位图标
+   ============================================================ */
+const DUMMY_GROUP = ["img_passbook",
+  "img_mail","img_calendar","img_camera",
+  "img_phone","img_alarm_2","img_maps",
+  "img_photos","img_remote","img_workout",
+  "img_world_clock","img_stocks",
+  "img_alarm","img_stocks"];
+const DUMMY = [].concat(DUMMY_GROUP, DUMMY_GROUP, DUMMY_GROUP, DUMMY_GROUP); // 56 个
+
+const ICONS = [];
+ICONS.push({src:ezip("img_clock.png"),        id:"clock",     name:"时钟",        real:true});
+ICONS.push({src:ezip("img_calculator.png"),   id:"calculator",name:"计算器",      real:true});
+ICONS.push({src:ezip("img_LiChuang.png"),     id:"lckfb",     name:"Hello World", real:true});
+ICONS.push({src:ezip("img_passbook.png"),     id:"rotation3d",name:"旋转立方体",  real:true});
+DUMMY.forEach(n => ICONS.push({src:ezip(n+".png"), id:"none", name:n, real:false}));
+
+/* ============================================================
+   ⚠ 实测发现：工程里有 8 张菜单图标资源是坏的
+   文件本身是合法 PNG，但内容是「思澈科技」四个字的字形切片
+   （思 / 澈 / 科 / 技 各出现两次），不是图标。
+   已交叉核对：立创桌面版 与 SDK 的 watch(v8)、watch_v9 三份
+   副本**逐字节完全一致** —— 所以是上游发出来就坏的，不是下载问题。
+   ============================================================ */
+const BROKEN = {
+  "img_calendar":    "思",
+  "img_camera":      "澈",
+  "img_phone":       "技",
+  "img_maps":        "科",
+  "img_photos":      "思",
+  "img_remote":      "澈",
+  "img_world_clock": "技",
+  "img_stocks":      "科"
+};
+
+/* ============================================================
+   layout_icon_transform —— 逐行照抄的鱼眼变换
+   ============================================================ */
+function transformIcon(sx, sy, r0){
+  let r = r0;
+  const pivotR = Math.hypot(sx - CTR_X, sy - CTR_Y);
+
+  // limit_round2(LIMIT_R, 屏幕中心)  (L294-316)
+  if(pivotR + r > LIMIT_R){
+    if(pivotR - r < LIMIT_R){
+      const ow = sx - CTR_X, oh = sy - CTR_Y;
+      r = (LIMIT_R - (pivotR - r)) / 2;
+      const npr = LIMIT_R - r;
+      sx += (ow * npr / pivotR) - ow;
+      sy += (oh * npr / pivotR) - oh;
+    } else { r = 0; }
+  }
+
+  // limit_square(374x430 居中矩形)  (L222-253)
+  if(r > 0){
+    const rx1 = Math.max(PX1, sx - r), ry1 = Math.max(PY1, sy - r);
+    const rx2 = Math.min(PX2, sx + r), ry2 = Math.min(PY2, sy + r);
+    if(rx1 > rx2 || ry1 > ry2){ r = 0; }
+    else{
+      const nw = rx2 - rx1 + 1, nh = ry2 - ry1 + 1;
+      r = Math.min(nw/2, nh/2);
+      sx = rx1 + nw/2; sy = ry1 + nh/2;
+    }
+  }
+
+  // Gap 补偿 (L651-661)
+  if(r >= GAP) r -= GAP; else r = 0;
+
+  return {x:sx, y:sy, r:r};
+}
+
+/* ---------- 算每个图标的页面坐标 ---------- */
+const PIVOTS = ICONS.map((_, i) => {
+  const {row, col} = idxToColRow(i);
+  return pivotOf(row, col);
+});
+
+/* ============================================================
+   渲染蜂巢
+   ============================================================ */
+const grid = document.getElementById("menuGrid");
+const nodes = ICONS.map((ic, i) => {
+  const d = document.createElement("div");
+  const base = ic.src.split("/").pop().replace(".png", "");
+  const isBad = !!BROKEN[base];
+  d.className = "hx" + (ic.real ? " real" : " dummy") + (isBad ? " broken" : "");
+  const img = document.createElement("img");
+  img.src = ic.src; img.alt = ic.name; img.draggable = false;
+  d.appendChild(img);
+  d.dataset.i = i;
+  if(i < 4) d.title = ic.name + "（真应用）";
+  else if(isBad) d.title = base + " —— 这张图是坏的，内容是「" + BROKEN[base] + "」字";
+  grid.appendChild(d);
+  return d;
+});
+document.getElementById("markBad").addEventListener("change", e => {
+  document.body.classList.toggle("nomark", !e.target.checked);
+});
+
+let pan = {x:0, y:0};          // 页面坐标 → 屏幕坐标 的平移
+let cur = 0;                   // 当前选中的图标 idx
+
+function clampPan(){
+  pan.x = Math.min(0, Math.max(HOR - PAGE_W, pan.x));
+  pan.y = Math.min(0, Math.max(VER - PAGE_H, pan.y));
+}
+function centerOn(i){
+  const p = PIVOTS[i];
+  pan.x = CTR_X - p.x;
+  pan.y = CTR_Y - p.y;
+  clampPan();
+}
+function drawMenu(){
+  for(let i=0;i<nodes.length;i++){
+    // 屏幕坐标 = 页面坐标 + pan；再走一遍鱼眼变换
+    const t = transformIcon(PIVOTS[i].x + pan.x, PIVOTS[i].y + pan.y, R_OUT);
+    const n = nodes[i];
+    if(t.r <= 0.5){ n.style.display = "none"; continue; }
+    n.style.display = "block";
+    n.style.left = (t.x - t.r) + "px";
+    n.style.top  = (t.y - t.r) + "px";
+    n.style.width = n.style.height = (t.r*2) + "px";
+    n.classList.toggle("focus", i === cur);
+  }
+}
+centerOn(0);
+drawMenu();
+
+/* ---------- 拖动 / 滚轮 / 吸附 ---------- */
+const stage = document.getElementById("stage");
+const SCALE = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--s")) || 1;
+
+function nearestIdx(){
+  let best = 0, bd = Infinity;
+  for(let i=0;i<PIVOTS.length;i++){
+    const t = transformIcon(PIVOTS[i].x + pan.x, PIVOTS[i].y + pan.y, R_OUT);
+    if(t.r <= 0.5) continue;
+    const d = Math.hypot(t.x - CTR_X, t.y - CTR_Y);
+    if(d < bd){ bd = d; best = i; }
+  }
+  return best;
+}
+
+/* 平滑地把当前图标移到屏幕中心 */
+let glide = null;
+function glideTo(targetIdx){
+  if(glide) cancelAnimationFrame(glide);
+  const p = PIVOTS[targetIdx];
+  const to = {x: CTR_X - p.x, y: CTR_Y - p.y};
+  // 目标也要过一遍 clamp
+  to.x = Math.min(0, Math.max(HOR - PAGE_W, to.x));
+  to.y = Math.min(0, Math.max(VER - PAGE_H, to.y));
+  const from = {x: pan.x, y: pan.y};
+  const t0 = performance.now(), dur = 190;
+  (function step(now){
+    const k = Math.min(1, (now - t0)/dur);
+    const e = 1 - Math.pow(1-k, 3);
+    pan.x = from.x + (to.x - from.x)*e;
+    pan.y = from.y + (to.y - from.y)*e;
+    drawMenu();
+    if(k < 1) glide = requestAnimationFrame(step); else glide = null;
+  })(t0);
+}
+
+function select(i, glideIt){
+  cur = i;
+  if(glideIt) glideTo(i);
+  else { centerOn(i); drawMenu(); }
+}
+
+let drag = null;
+stage.addEventListener("pointerdown", e => {
+  if(mode !== "menu") return;
+  const hit = e.target.closest(".hx");
+  drag = {sx:e.clientX, sy:e.clientY, px:pan.x, py:pan.y, moved:0, hit:hit ? +hit.dataset.i : -1};
+  if(glide){ cancelAnimationFrame(glide); glide = null; }
+  try{ stage.setPointerCapture(e.pointerId); }catch(_){}
+  e.preventDefault();
+});
+stage.addEventListener("pointermove", e => {
+  if(!drag) return;
+  pan.x = drag.px + (e.clientX - drag.sx)/SCALE;
+  pan.y = drag.py + (e.clientY - drag.sy)/SCALE;
+  drag.moved = Math.max(drag.moved, Math.hypot(e.clientX-drag.sx, e.clientY-drag.sy));
+  clampPan(); drawMenu();
+});
+function endDrag(){
+  if(!drag) return;
+  const it = drag;
+  drag = null;
+  if(it.moved < 6 && it.hit >= 0){
+    const i = it.hit;
+    if(ICONS[i].real && i === cur){ openApp(ICONS[i].id); return; }
+    select(i, true); return;
+  }
+  select(nearestIdx(), true);
+}
+stage.addEventListener("pointerup", endDrag);
+stage.addEventListener("pointercancel", () => { drag = null; });
+
+stage.addEventListener("wheel", e => {
+  if(mode !== "menu") return;
+  e.preventDefault();
+  if(glide){ cancelAnimationFrame(glide); glide = null; }
+  pan.x -= e.deltaX/SCALE; pan.y -= e.deltaY/SCALE;
+  clampPan(); drawMenu();
+}, {passive:false});
+
+/* 键盘：在六边形格点上找“那个方向最近的邻居” */
+document.addEventListener("keydown", e => {
+  if(mode !== "menu") return;
+  const axis = {
+    ArrowLeft:[-1, 0], ArrowRight:[1, 0],
+    ArrowUp:[0, -1],   ArrowDown:[0, 1]
+  }[e.key];
+  if(!axis) return;
+  e.preventDefault();
+  const [ux, uy] = axis;
+  const cx = PIVOTS[cur].x, cy = PIVOTS[cur].y;
+  let best = cur, bs = Infinity;
+  for(let i=0;i<PIVOTS.length;i++){
+    if(i === cur) continue;
+    const dx = PIVOTS[i].x - cx, dy = PIVOTS[i].y - cy;
+    const along = dx*ux + dy*uy;                 // 朝这个方向的分量
+    if(along <= 40) continue;                    // 必须真的在那一侧
+    const perp = Math.abs(dx*uy - dy*ux);        // 垂直方向的偏移，越小越“正对”
+    const score = along + perp*2.2;
+    if(score < bs){ bs = score; best = i; }
+  }
+  select(best, true);
+});
+
+/* ============================================================
+   表盘（实时走针）
+   指针挂点 / 对齐偏移照 app_clock_simple.c L108-113、
+   app_clock_dial.c L86-88
+   ============================================================ */
+const DIALS = {
+  simple: {
+    label:"简约表盘",
+    bg:{src:large("clock_simple_bg.png"), w:454, h:454},
+    hands:[
+      {src:noez("clock_simple_hour_hand.png"),   w:15, h:182, px:7, py:157, off:(182>>1)-157, rot:0},
+      {src:noez("clock_simple_minute_hand.png"), w:15, h:211, px:7, py:186, off:(211>>1)-186, rot:0},
+      {src:noez("clock_simple_second_hand.png"), w:13, h:336, px:6, py:230, off:(336>>1)-230, rot:0},
+    ]
+  },
+  dial: {
+    label:"刻度表盘",
+    bg:{src:large("img_dial_bg.png"), w:480, h:480},
+    hands:[
+      {src:noez("clock_dial_point_h.png"), w:35, h:123, px:17, py:108, off:(123>>1)-108, rot:0},
+      {src:noez("clock_dial_point_m.png"), w:41, h:160, px:20, py:140, off:(160>>1)-140, rot:0},
+      {src:noez("clock_dial_point_s.png"), w:16, h:184, px:8,  py:160, off:(184>>1)-160, rot:0},
+    ]
+  }
+};
+
+function buildDial(key){
+  const d = DIALS[key];
+  const bgDiv = document.getElementById("dialBg");
+  const hdDiv = document.getElementById("dialHands");
+  bgDiv.innerHTML = ""; hdDiv.innerHTML = "";
+
+  const b = document.createElement("img");
+  b.src = d.bg.src;
+  b.style.cssText = `position:absolute;width:${d.bg.w}px;height:${d.bg.h}px;` +
+                    `left:${(HOR-d.bg.w)/2}px;top:${(VER-d.bg.h)/2}px;max-width:none;`;
+  bgDiv.appendChild(b);
+
+  d.hands.forEach((h, k) => {
+    const img = document.createElement("img");
+    img.src = h.src;
+    img.style.cssText =
+      `position:absolute;width:${h.w}px;height:${h.h}px;max-width:none;` +
+      `left:${(HOR - h.w)/2}px;` +
+      `top:${(VER/2 - h.py) + 0}px;` +
+      `transform-origin:${h.px}px ${h.py}px;`;
+    hdDiv.appendChild(img);
+    h.el = img;
+  });
+  tickDial(key, true);
+}
+function tickDial(key, force){
+  const d = DIALS[key]; if(!d) return;
+  const now = new Date();
+  const ms = now.getMilliseconds()/1000;
+  const s  = now.getSeconds() + ms;
+  const m  = now.getMinutes() + s/60;
+  const h  = (now.getHours()%12) + m/60;
+  const angles = [h/12*360, m/60*360, s/60*360];
+  d.hands.forEach((hh, k) => { if(hh.el) hh.el.style.transform = `rotate(${angles[k]}deg)`; });
+}
+
+/* ---------- 立方体：用真实图片资源当面 ---------- */
+const CUBE_FACES = [
+  large("clock_simple_bg.png"), large("clock_digital_bg.png"),
+  large("clock_mickey_bg.png"), large("img_dial_bg.png"),
+  noez("clock_rotate_bg_bg.png"), large("clock_dashes.png")
+];
+document.getElementById("cube").innerHTML =
+  CUBE_FACES.map((s,i)=>`<div class="face f${i+1}"><img src="${s}" alt=""></div>`).join("");
+
+/* ============================================================
+   页面切换
+   ============================================================ */
+const TABS = [
+  {id:"menu",   label:"蜂巢主菜单"},
+  {id:"clock",  label:"时钟",            param:"simple"},
+  {id:"clock",  label:"时钟 · 刻度表盘", param:"dial"},
+  {id:"hello",  label:"Hello World"},
+  {id:"cube",   label:"旋转立方体"},
+];
+let mode = "menu", curDial = "simple";
+
+const tabsEl = document.getElementById("tabs");
+TABS.forEach((t, i) => {
+  const b = document.createElement("button");
+  b.className = "tab" + (i===0 ? " on" : "");
+  b.textContent = t.label;
+  b.onclick = () => {
+    [...tabsEl.children].forEach(c => c.classList.remove("on"));
+    b.classList.add("on");
+    switchPane(t);
+  };
+  tabsEl.appendChild(b);
+});
+
+function switchPane(t){
+  mode = t.id;
+  document.querySelectorAll(".screenPane").forEach(p => p.classList.remove("on"));
+  document.getElementById("pane-" + t.id).classList.add("on");
+  if(t.id === "menu"){ centerOn(cur); drawMenu(); }
+  if(t.id === "clock"){ curDial = t.param; buildDial(curDial); }
+  renderInfo(t);
+  const h = t.id === "clock" ? "#" + (t.param || "simple") : "#" + t.id;
+  if(location.hash !== h) history.replaceState(null, "", h);
+}
+/* 深链见脚本末尾 —— 要等所有渲染函数都就绪后才能切 */
+function openApp(id){
+  const t = TABS.find(x => x.id === id);
+  if(!t) return;
+  switchPane(t);
+  const idx = TABS.indexOf(t);
+  [...tabsEl.children].forEach((c,i) => c.classList.toggle("on", i === idx));
+}
+setInterval(() => { if(mode === "clock") tickDial(curDial); }, 60);
+
+/* ============================================================
+   右侧说明文案
+   ============================================================ */
+const INFO = {
+  menu: {
+    title:"蜂窝主菜单", pill:["骨架","info"],
+    html:`<p style="margin:0 0 10px">
+      这是这份工程<b>唯一像样的原创界面</b>：一个六边形网格，靠拖动平移，
+      离屏幕中心越远图标越小、越淡，最后被裁掉。</p>
+      <p style="margin:0"><b>但它一共 59 个图标，只有 3 个是真的：</b></p>
+      <table style="margin-top:8px">
+        <tr><th>位置</th><th>图标</th><th>点进去</th></tr>
+        <tr><td>idx 0 · 正中心</td><td><code class="k">img_clock</code></td>
+            <td><span class="pill real">真</span> 表盘</td></tr>
+        <tr><td>idx 1</td><td><code class="k">img_LiChuang</code></td>
+            <td><span class="pill real">真</span> 立创的 Hello World</td></tr>
+        <tr><td>idx 2</td><td><code class="k">img_passbook</code></td>
+            <td><span class="pill real">真</span> 旋转立方体</td></tr>
+        <tr><td>idx 3 … 58</td><td>14 张图循环用 4 轮</td>
+            <td><span class="pill fake">假的</span> 命令字是 <code class="k">"none"</code>，<b>点了没反应</b></td></tr>
+      </table>
+      <div class="warnbox" style="margin-top:12px">
+        那 56 个占位图标的代码在 <code class="k">app_mainmenu.c:1176</code>，
+        包在 <code class="k">#if 1 //for demo, full fill screen</code> 里，
+        还额外设了 <code class="k">LV_OPA_50</code>（50% 半透明）。
+      </div>
+      <div class="warnbox" style="margin-top:8px;background:#fff1f2;border-color:#fecdd3">
+        而且这 14 张图里有 <b>8 张本身是坏的</b>（内容是「思澈科技」的字形切片），
+        所以你在表里会看到「思 澈 科 技」这几个字 —— 那是资源文件的毛病，
+        不是我画错了。勾选下面的开关可以高亮它们。
+      </div>
+      <div class="hintline">← 在左边的表里拖一下，或者按方向键换格子。</div>`
+  },
+  clock: {
+    title:"时钟（表盘）", pill:["真 · 但时间是假的","real"],
+    html:`<p style="margin:0 0 10px">表盘本身是真的：背景图 + 三根独立指针 + 定时刷新。
+      源码里有两套，左边都能切着看。</p>
+      <table>
+        <tr><th>表盘</th><th>背景</th><th>指针</th></tr>
+        <tr><td>简约</td><td><code class="k">clock_simple_bg</code> 454²</td>
+            <td><code class="k">clock_simple_hour/minute/second_hand</code></td></tr>
+        <tr><td>刻度</td><td><code class="k">img_dial_bg</code> 480²</td>
+            <td><code class="k">clock_dial_point_h/m/s</code></td></tr>
+      </table>
+      <div class="warnbox" style="margin-top:12px">
+        <b>但时间是假的。</b> <code class="k">app_clock_main.c</code> 里取时间是
+        <code class="k">clock_t clk = clock();</code> —— 这是 CPU 计时器，不是 RTC。
+        <code class="k">watch_demo.c:432</code> 还硬写了
+        <code class="k">set_date(2022,7,1)</code> / <code class="k">set_time(9,0,0)</code> 当起点。
+        <br>所以真机开机后从 00:00:00 往上走，跟当前时间无关。
+        <br>这里的预览<b>走的是你电脑的真实时间</b>，因为这样更好看，也更接近“改好之后”的样子。
+      </div>
+      <div class="hintline">指针挂点坐标：<code class="k">lv_img_set_pivot()</code>
+        —— 简约盘 (7,157) / (7,186) / (6,230)，刻度盘 (17,108) / (20,140) / (8,160)。</div>`
+  },
+  hello: {
+    title:"Hello World（立创加的）", pill:["真","real"],
+    html:`<p style="margin:0">这是立创往官方 demo 里塞的唯一一个自己的应用，
+      也是整个工程里<b>最值得先读的一份代码</b>——只有 93 行。</p>
+      <p style="margin:8px 0 0">它干的事就一件：开一个全屏对象，放一个白色
+      <code class="k">"Hello World"</code> 文字，居中。</p>
+      <div class="hintline">
+        路径：<code class="k">src/gui_apps/LC_Hello_World/main.c</code><br>
+        学它怎么挂进菜单：文件最后一行 <code class="k">BUILTIN_APP_EXPORT(...)</code>，
+        里面填 4 个东西 —— 字符串 ID、图标、APP_ID、入口函数。
+      </div>`
+  },
+  cube: {
+    title:"旋转立方体", pill:["真 · 但内容是测试图","info"],
+    html:`<p style="margin:0 0 10px">
+      这个应用会把一张图做 3D 旋转，做出立方体转场的效果 ——
+      <b>GPU 侧的旋转是真的在跑。</b></p>
+      <div class="warnbox">
+        问题在于它转的那张图上画的是<b>一个红色大叉的测试图</b>。<br>
+        <code class="k">rotation3d.c:29</code> 声明了 <code class="k">d3d_rotate</code>，
+        <code class="k">:293-294</code> 两路图源都指向它，然后拉满全屏
+        (<code class="k">LV_HOR_RES_MAX × LV_VER_RES_MAX</code>) 去旋转。<br>
+        也就是说：<b>这个“炫酷转场”现在的画面，是一张带红叉的调试占位图。</b>
+      </div>
+      <p style="margin:10px 0 0">左边那个立方体，六个面用的就是这个工程里的真实图片资源，
+      演示同一个旋转动作。</p>`
+  }
+};
+function renderInfo(t){
+  const d = INFO[t.id];
+  document.getElementById("infoTitle").textContent = "当前：" + d.title;
+  const p = document.getElementById("infoPill");
+  p.textContent = d.pill[0]; p.className = "pill " + d.pill[1];
+  document.getElementById("infoBody").innerHTML = d.html;
+  const notes = {
+    menu:"提示：这是按 app_mainmenu.c 的公式重画的，不是固件截图。",
+    clock:"提示：指针按 app_clock_simple.c / app_clock_dial.c 的 pivot 坐标摆放。",
+    hello:"提示：文案与居中对齐照 LC_Hello_World/main.c 复刻。",
+    cube:"提示：真机里转的是 d3d_rotate 那张红叉测试图。"
+  };
+  document.getElementById("paneNote").textContent = notes[t.id] || "";
+}
+renderInfo(TABS[0]);
+
+/* ============================================================
+   图标审计 + 资产总览
+   ============================================================ */
+(function(){
+  const used = new Set(ICONS.map(i => i.src.split("/").pop()));
+  const counts = {};
+  ICONS.forEach(i => {
+    const n = i.src.split("/").pop();
+    counts[n] = (counts[n]||0) + 1;
+  });
+  const rows = Object.entries(counts).sort((a,b)=>b[1]-a[1])
+    .map(([n,c]) => `<tr><td><code class="k">${n}</code></td><td>${c} 次</td>
+      <td>${n==="img_clock"?"<span class='pill real'>真应用</span>":
+             n==="img_calculator"?"<span class='pill real'>真应用</span>":
+             n==="img_LiChuang"?"<span class='pill real'>真应用</span>":
+             n==="img_passbook"?"<span class='pill real'>真应用</span>":
+             BROKEN[n.replace(".png","")] ? "<span class='pill fake'>坏资源</span>" :
+             "<span class='pill fake'>占位</span>"}</td></tr>`).join("");
+  document.getElementById("iconAudit").innerHTML =
+    `<p style="margin:0 0 8px">60 个图标格子，只用到 <b>${Object.keys(counts).length}</b> 张不同的图：</p>
+     <table><tr><th>图片</th><th>出现次数</th><th>性质</th></tr>${rows}</table>
+     <div class="hintline">同一张图反复贴 = 一眼就能看出是凑数的骨架。</div>`;
+
+  // 坏资源清单
+  const bl = document.getElementById("badList");
+  if(bl){
+    bl.innerHTML = Object.entries(BROKEN).map(([n, g]) =>
+      `<div class="bad"><img src="${ezip(n + ".png")}" alt="${n}">
+        <div class="n">${n}.png</div><div class="g">实际画的是「${g}」</div></div>`).join("");
+  }
+})();
+
+(function(){
+  const dirs = [
+    ["ezip","/ezip/"],
+    ["large_ezip","/large_ezip/"],
+    ["no_ezip","/no_ezip/"]
+  ];
+  // 直接从已知清单渲染（文件名 + 尺寸来自实际读取）
+  const LIST = {
+    ezip: ["airplane 40x40","bluetooth 40x40","clock_40 40x40","clock_80 80x80","compass_arrow_shadow 60x320",
+      "dn 40x40","down_arrow 20x20","eco 90x86","house 85x85","human1 88x88","human2 88x88",
+      "img_LiChuang 220x220","img_activity 88x88","img_alarm 90x91","img_alarm_2 90x91","img_calendar 88x88",
+      "img_camera 88x88","img_clock 90x91","img_compass 90x91","img_ecg 150x25","img_group 90x91",
+      "img_itunes 90x91","img_left_arrow 9x17","img_mail 90x91","img_maps 88x88","img_messages 90x91",
+      "img_mountion 90x90","img_passbook 90x91","img_phone 88x88","img_photos 30x30","img_red_heart 100x85",
+      "img_remote 30x30","img_settings 90x91","img_stocks 30x30","img_stopwatch 90x91","img_workout 90x91",
+      "img_world_clock 30x30","ms_earth 51x51","ms_water 48x48","up_arrow 20x20","weather 85x85",
+      "wt_circle 40x37","wt_clock 120x120","wt_cloudy 40x40","wt_compass 40x38","wt_earth 40x42",
+      "wt_rain 40x40","wt_snow 40x40","wt_sunny 40x40","wt_weather 99x78","wt_wind 40x32"],
+    large_ezip: ["barometer 240x240","clock_dashes 400x400","clock_digital_bg 454x454","clock_mickey_bg 454x454",
+      "clock_mickey_body 257x219","clock_mickey_head 211x182","clock_simple_bg 454x454","compass_bg 223x320",
+      "elevation 240x240","hr_region 200x200","img_dial_bg 480x480"],
+    no_ezip: ["baro_arrow 20x210","clock_dial_point_h 35x123","clock_dial_point_m 41x160","clock_dial_point_s 16x184",
+      "clock_rotate_bg_bg 359x359","clock_rotate_bg_bg_small 200x200","clock_rotate_bg_bg_tiny 150x150",
+      "clock_rotate_bg_hour_hand 23x240","clock_rotate_bg_minute_hand 23x240","clock_simple_hour_hand 15x182",
+      "clock_simple_minute_hand 15x211","clock_simple_second_hand 13x336","compass_arrow 318x316",
+      "d3d_rotate 320x380","fashion_hr 23x240","fashion_min 23x240","fashion_sec 23x240",
+      "hour_hand2 28x252","kaleidoscope 432x432","minute_hand2 28x356","second_hand2 20x400"]
+  };
+  let html = "";
+  for(const [k, arr] of Object.entries(LIST)){
+    html += `<div style="margin:0 0 6px;font-weight:600;font-size:12px;color:#0e7490">/ ${k} · ${arr.length} 张</div><div class="assets">`;
+    arr.forEach(s => {
+      const [nm, dm] = s.split(" ");
+      html += `<div class="asset"><img src="${RES}${k}/${nm}.png" loading="lazy" alt="${nm}">
+        <div class="nm">${nm}</div><div class="dm">${dm}</div></div>`;
+    });
+    html += `</div><div style="height:14px"></div>`;
+  }
+  document.getElementById("assets").innerHTML = html;
+})();
+
+/* ============================================================
+   深链：等一切就绪后按 hash 切屏
+   #menu  #simple  #dial  #hello  #cube
+   ============================================================ */
+(function(){
+  const map = {"#simple":1, "#dial":2, "#hello":3, "#cube":4, "#menu":0};
+  const idx = map[location.hash];
+  if(idx === undefined) return;
+  const t = TABS[idx];
+  [...tabsEl.children].forEach((c,i) => c.classList.toggle("on", i === idx));
+  switchPane(t);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>接上真大模型 —— 你只需要改两行</title>
+<style>
+  :root{
+    --bg:#eef1f5; --card:#ffffff; --ink:#1c2530; --ink2:#4a5866; --ink3:#7b8896;
+    --line:#dde3ea; --accent:#1f6feb; --accent-soft:#e8f0fe;
+    --ok:#18794e; --ok-soft:#e7f4ee; --warn:#a35b00; --warn-soft:#fdf3e3;
+    --code:#f4f6f9; --code-line:#e2e8f0;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:32px 20px 64px; background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB",sans-serif;
+    line-height:1.75; font-size:15px;
+  }
+  .wrap{max-width:860px;margin:0 auto}
+  header{margin-bottom:26px}
+  h1{margin:0 0 8px; font-size:27px; letter-spacing:-.3px}
+  .sub{color:var(--ink2); font-size:14.5px}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:22px 24px; margin-bottom:18px;
+    box-shadow:0 1px 2px rgba(20,30,45,.04), 0 6px 18px -10px rgba(20,30,45,.14);
+  }
+  .card h2{
+    margin:0 0 14px; font-size:17px; display:flex; align-items:center; gap:10px;
+  }
+  .num{
+    flex:none; width:26px; height:26px; border-radius:50%;
+    background:var(--accent); color:#fff; font-size:14px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .num.done{background:var(--ok)}
+  p{margin:0 0 12px} p:last-child{margin-bottom:0}
+  code{
+    background:var(--code); border:1px solid var(--code-line); border-radius:4px;
+    padding:1px 5px; font-family:"Cascadia Mono",Consolas,Menlo,monospace;
+    font-size:13px; color:#243447;
+  }
+  pre{
+    background:var(--code); border:1px solid var(--code-line); border-radius:8px;
+    padding:14px 16px; overflow-x:auto; margin:12px 0;
+    font-family:"Cascadia Mono",Consolas,Menlo,monospace; font-size:13px; line-height:1.7;
+    color:#243447;
+  }
+  pre .hi{background:#fff3bf; border-radius:3px; padding:1px 3px; font-weight:600}
+  pre .cm{color:#7b8896}
+  table{width:100%; border-collapse:collapse; margin:12px 0; font-size:14px}
+  th,td{text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  th{color:var(--ink3); font-weight:600; font-size:13px; background:#fafbfc}
+  tr:last-child td{border-bottom:none}
+  .tag{
+    display:inline-block; padding:1px 8px; border-radius:20px; font-size:12.5px; font-weight:600;
+    background:var(--accent-soft); color:var(--accent); white-space:nowrap;
+  }
+  .tag.ok{background:var(--ok-soft); color:var(--ok)}
+  .tag.warn{background:var(--warn-soft); color:var(--warn)}
+  .note{
+    border-left:3px solid var(--accent); background:#f7faff;
+    padding:11px 15px; border-radius:0 8px 8px 0; margin:14px 0; font-size:14.5px;
+  }
+  .note.warn{border-color:#e0a800; background:#fffdf5}
+  .note.good{border-color:#2f9e6b; background:#f5fcf8}
+  .big{
+    font-size:15.5px; font-weight:600; color:var(--ink);
+  }
+  ul{margin:8px 0 12px; padding-left:20px} li{margin:5px 0}
+  .foot{color:var(--ink3); font-size:13px; text-align:center; margin-top:28px; line-height:1.9}
+  .rainbow{color:var(--accent); font-weight:700}
+  .filepath{
+    font-family:"Cascadia Mono",Consolas,Menlo,monospace; font-size:13px;
+    background:#f4f6f9; border:1px dashed var(--line); border-radius:6px;
+    padding:8px 12px; margin:10px 0; word-break:break-all; color:#334155;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>接上真大模型 —— 你只需要改两行</h1>
+  <div class="sub">电脑侧（阶段二）已经全部做完并验证过了。剩下的唯一变量是你的 key。</div>
+</header>
+
+<div class="note good">
+  <span class="big">先说结论：</span>整条链路已经在一个<b>本地假模型</b>上跑通了 ——
+  手表发问、蓝牙传输、电脑走真正的 HTTP 接口、答案原路回到手表，全部在真机上验过。
+  等价的 HTTP 客户端代码也逐项验过 53 条断言。所以你现在填 key，
+  <b>不会再遇到「代码问题」和「key 问题」混在一起分不清</b>的情况。
+</div>
+
+<div class="card">
+  <h2><span class="num">1</span>选一家，申请一个 API key</h2>
+  <p>六家都兼容同一套接口，选哪家的代码都不用改。按「新手友好 + 省钱」排的序：</p>
+  <table>
+    <tr><th>选它</th><th>去哪申请</th><th>说明</th></tr>
+    <tr>
+      <td><span class="tag">推荐</span> deepseek</td>
+      <td>platform.deepseek.com</td>
+      <td>最便宜，中文好，注册后按量付费（几块钱能用很久）</td>
+    </tr>
+    <tr>
+      <td>zhipu</td><td>open.bigmodel.cn</td>
+      <td><code>glm-4-flash</code> 这个型号是<b>免费</b>的，想零成本先跑通就选它</td>
+    </tr>
+    <tr>
+      <td>qwen</td><td>bailian.console.aliyun.com</td>
+      <td>通义千问，新用户有免费额度</td>
+    </tr>
+    <tr>
+      <td>moonshot</td><td>platform.moonshot.cn</td>
+      <td>Kimi</td>
+    </tr>
+    <tr>
+      <td>hunyuan</td><td>console.cloud.tencent.com/hunyuan</td>
+      <td>腾讯混元</td>
+    </tr>
+    <tr>
+      <td>openai</td><td>platform.openai.com</td>
+      <td>需要海外网络环境，新手不建议先碰</td>
+    </tr>
+  </table>
+  <div class="note warn">
+    申请到的 key 长得像 <code>sk-xxxxxxxxxxxx</code>，一长串。<b>它只显示一次</b>，
+    记得当场复制存好。别把它发给我或发到任何对话里 —— 直接填进下面那个文件就行。
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="num">2</span>打开配置文件，改两行</h2>
+  <div class="filepath">C:\Users\18058\Desktop\huangshanpai\watch\ai_brain_config.json</div>
+  <p>用记事本打开就行。只需要动这两行的<b>值</b>（引号里的内容）：</p>
+<pre>"provider": <span class="hi">"deepseek"</span>,
+"api_key":  <span class="hi">"sk-你申请到的那一串"</span>,
+
+"base_url": "",        <span class="cm">← 这两行不用动，会自动填</span>
+"model":    "",        <span class="cm">←</span></pre>
+  <div class="note warn">
+    <b>⚠ 真实文件里不要写 <code>//</code> 注释。</b>标准 JSON 不支持注释，
+    写了会读不出来（程序会退回离线模式并提示）。
+    上面那种灰色说明文字只是我在这里给你看的，<b>不要抄进文件</b>。
+    文件里本来就已经用 <code>_说明</code> 开头的字段把该讲的都写了。
+  </div>
+  <div class="note">
+    <b>为什么不用抄 base_url 和 model：</b>预置表在文件里，你写 <code>"deepseek"</code>
+    它就自动补上 <code>https://api.deepseek.com/v1</code> + <code>deepseek-chat</code>。
+    少两处手抄错误的机会。
+  </div>
+  <div class="note warn">
+    <b>注意别多打空格。</b>写成 <code>"deepseek "</code>（末尾多个空格）本来是会失败的，
+    这个坑已经修了 —— 现在两头空格和大小写都会自动处理。但你少打一个引号还是会坏，
+    存盘前扫一眼。
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="num">3</span>先自测，确认 key 通不通</h2>
+  <p>不用碰手表，先在电脑上问一句：</p>
+<pre>cd C:\Users\18058\Desktop\huangshanpai\watch
+python ble_ai_pc.py ask "用一句话介绍你自己"</pre>
+  <p>会打印出当前配置（<code>模式 : deepseek</code>、<code>API key : 已填（sk-abc...1234，共 32 字符）</code>），
+     然后给出模型的回答。</p>
+  <div class="note good">
+    <b>看到回答就成功了。</b>它还会顺手告诉你这句话有多长 ——
+    超过手表能收的上限时，会主动提示「会截断成什么样」。
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="num done">✓</span>通了之后，怎么和手表连着用</h2>
+  <p>手表那边不需要重新烧固件，现在这份固件就够用。顺序是：</p>
+  <ol>
+    <li>手表开机（或按 RTS 复位），等蓝牙起来开始广播</li>
+    <li>电脑上跑服务：<code>python ble_ai_pc.py serve</code> —— 它会自己扫、自己连、断了自动重连</li>
+    <li>看到 <code>已发就绪信标 '[pc] ready'</code> 就说明链路双向都通了</li>
+    <li>在手表串口敲 <code>ai_send 今天北京天气怎么样</code>，答案会自动回到手表</li>
+  </ol>
+  <div class="note">
+    手表的回声（<code>[watch] got ...</code>）会被自动忽略，不用先关 <code>ai_echo</code> ——
+    开关怎么设都对。
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="num">?</span>出问题看这张表</h2>
+  <p>报错信息都特意写成了人话。对着找：</p>
+  <table>
+    <tr><th>提示</th><th>真正的原因</th><th>怎么办</th></tr>
+    <tr>
+      <td>没有填 API key</td>
+      <td>配置里 <code>api_key</code> 还是空的</td>
+      <td>回到第 2 步填上；或者先用 <code>provider: "offline"</code> 试链路</td>
+    </tr>
+    <tr>
+      <td>HTTP 401（key 不对或没填对）</td>
+      <td>key 抄错、抄漏，或多粘了空格</td>
+      <td>重新复制一次，注意不要带首尾空格</td>
+    </tr>
+    <tr>
+      <td>HTTP 402（余额不足）</td>
+      <td>账户没余额了</td>
+      <td>充值，或换 zhipu 的 <code>glm-4-flash</code></td>
+    </tr>
+    <tr>
+      <td>HTTP 404（模型名或 base_url 不对）</td>
+      <td><code>provider</code> 拼错了，或手填了错的 model</td>
+      <td>把 <code>base_url</code> / <code>model</code> 清空让它自动填</td>
+    </tr>
+    <tr>
+      <td>HTTP 429（请求太频繁）</td>
+      <td>问太快，或免费额度用完</td>
+      <td>等一会儿；或换一家</td>
+    </tr>
+    <tr>
+      <td><b>HTTP 502 / 503 / 504</b><br><span class="tag warn">最容易误判</span></td>
+      <td><b>多半是你本机的代理/VPN 出错</b>，不是对方服务器挂了</td>
+      <td>在配置里加一行 <code>"proxy": "none"</code> 再试</td>
+    </tr>
+    <tr>
+      <td>连不上接口</td>
+      <td>网络不通，或 base_url 写错</td>
+      <td>检查网络</td>
+    </tr>
+    <tr>
+      <td>接口 30 秒没响应（超时）</td>
+      <td>模型太忙或网络慢</td>
+      <td>把 <code>timeout</code> 调大，例如 60</td>
+    </tr>
+  </table>
+  <div class="note warn">
+    <b>502 那条单独说：</b>我在验证时真的踩到了 —— 让程序去连一个「必然关着」的端口，
+    收到的不是「连不上」，而是本机代理回的
+    <code>HTTP 502 Bad Gateway上游连接失败: 目标计算机积极拒绝</code>。
+    看着特别像对方服务器炸了，其实是自己电脑上的代理在报错。
+    所以报错文案里我专门把这条写清楚了。
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="num done">✓</span>这一轮验过的东西（不是拍脑袋说的）</h2>
+  <table>
+    <tr><th>验的是什么</th><th>结论</th></tr>
+    <tr>
+      <td>请求构造</td>
+      <td><span class="tag ok">通过</span> 路径 <code>/chat/completions</code>、<code>Bearer</code> 鉴权头、
+          系统提示词 + 用户问题两条消息、<code>max_tokens</code>，逐字段核对</td>
+    </tr>
+    <tr>
+      <td>各种错误码的提示</td>
+      <td><span class="tag ok">通过</span> 401 / 402 / 403 / 404 / 429 / 5xx / 超时 / 返回非 JSON，全部给了人话</td>
+    </tr>
+    <tr>
+      <td>超时真的生效</td>
+      <td><span class="tag ok">通过</span> 设 2 秒，服务故意睡 6 秒，实测 2 秒返回</td>
+    </tr>
+    <tr>
+      <td>回答太长会不会切出乱码</td>
+      <td><span class="tag ok">通过</span> 按 UTF-8 字节安全截断，60 档长度逐一验过，无乱码</td>
+    </tr>
+    <tr>
+      <td>长回答在 BLE 上分包</td>
+      <td><span class="tag ok">通过</span> 6 档 MTU × 11 种长度 = 66 组合，往返逐字节一致</td>
+    </tr>
+    <tr>
+      <td>真机端到端</td>
+      <td><span class="tag ok">通过</span> 手表 → 蓝牙 → 电脑 → 真 HTTP 接口 → 手表，
+          两次不同问题都成功，串口原始字节逐字节核对</td>
+    </tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2><span class="num">!</span>还差什么（说清楚，不糊弄）</h2>
+  <p><b>手表上还没有能看答案的界面。</b>现在答案是回到了手表，但<b>只出现在串口日志里，屏幕上看不见</b>。
+     手表目前只有一个表盘加几个 app（计算器、手电筒、2048），没有文字显示区。</p>
+  <p>所以现在的用法是「串口提问 + 串口看答案」。要变成真正在表上能用的东西，
+     下一步得加一个问答页：快捷问题按钮 + 答案显示区。需要再烧一次固件。</p>
+</div>
+
+<div class="foot">
+  电脑端程序：<code>ble_ai_pc.py</code>　·　大脑模块：<code>ai_brain.py</code>　·　配置：<code>ai_brain_config.json</code><br>
+  一把梭自检：<code>python _run_all_checks.py</code>
+</div>
+
+</div>
+</body>
+</html>

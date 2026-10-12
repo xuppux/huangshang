@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>2048 App · 黄山派手表（可玩预览）</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --line:#dfe3e8; --line2:#eef1f4;
+    --tx:#1f2328; --tx2:#59636e; --tx3:#8b949e;
+    --accent:#e07000; --blue:#1565c0; --green:#1a7f37; --red:#c62828;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--tx);
+    font:14px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:30px 22px 64px}
+  h1{font-size:25px;margin:0 0 8px;letter-spacing:-.2px}
+  .lede{color:var(--tx2);font-size:14.5px;margin:0 0 6px}
+  .lede b{color:var(--tx)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-top:18px}
+  h2{font-size:15.5px;margin:0 0 14px;display:flex;align-items:center;gap:9px}
+  h2::before{content:"";width:3px;height:15px;border-radius:2px;background:var(--accent)}
+  h2 .sub{font-weight:400;color:var(--tx3);font-size:12.5px}
+  h3{font-size:13.5px;margin:18px 0 8px;color:var(--tx)}
+  h3:first-child{margin-top:0}
+  p{margin:0 0 10px}
+  code{background:#f2f4f7;border:1px solid var(--line2);border-radius:4px;padding:1px 5px;
+       font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+  .muted{color:var(--tx2)}
+  .small{font-size:12.5px}
+  .cols{display:grid;grid-template-columns:auto 1fr;gap:34px;align-items:start}
+  @media (max-width:920px){.cols{grid-template-columns:1fr}}
+
+  /* ── 模拟表屏 390x450 ── */
+  .stage{display:flex;flex-direction:column;align-items:center;gap:12px}
+  .phone{
+    position:relative;width:390px;height:450px;border-radius:26px;
+    background:#FAF8EF;overflow:hidden;
+    /* ⚠ 环形描边用 box-shadow 而不是 border：border 会吃掉 1px 布局宽度，
+       里面所有绝对定位的元素就整体偏 1px、右边那条手势条也会落在 372 而不是 374 —— 
+       模拟屏上量的坐标就没法和真机（390x450）对上了。 */
+    box-shadow:0 0 0 1px #cfd6dd, 0 3px 14px rgba(20,30,50,.09);
+    cursor:grab;user-select:none;touch-action:none;
+  }
+  .phone:active{cursor:grabbing}
+
+  /* ⚠ 这里原来有一个左上角的「2048」标题（`.gt`，FONT_TITLE 28px / 行高 41px）。
+   *   2026-09-23 真机反馈「可以不要左上角 2048 字样，让那两个框顶部居中」——已删。
+   *   它占住左边，正是两个面板只能挤在右侧、进而底边贴死棋盘顶边的直接原因。 */
+
+  /* 分数 / 最佳 面板（80x55 @ y=28，圆角 8，底 #BBADA0）
+   * 两个并排、整体水平居中：PANEL_X0=(390-168)/2=111、PANEL_X1=199。
+   * 棋盘顶边 = 28+55+6 = 89，中间那 6px 就是 BAND_GAP —— 不要再让它变成 0。
+   *
+   * ⚠ 这里的 line-height 是**照抄固件**的，别改回 16px/22px。
+   *   真机上 FONT_SMALL(16) 的 label 高 25px、FONT_NORMAL(20) 的高 30px
+   *   —— 这是 SDK 里 lv_freetype_set_font_size() 写死的公式
+   *   size + size/3 + 4，比字号本身大一圈。
+   *   面板高度 = 25 + 30 = 55，小标题 top:0、数值 top:25（= LH_CAPTION）。
+   *   之前这里写 line-height:16/22 且用 flex 居中，把真机上的行高掩盖掉了，
+   *   所以真机上"汉字标题和数字叠在一起"这个问题在预览页里看不出来。
+   *   现在两边的行盒完全一致：谁改错，预览页和真机一起露馅。 */
+  .panel{position:absolute;width:80px;height:55px;border-radius:8px;background:#BBADA0}
+  .panel .cap2{position:absolute;left:0;right:0;top:0;text-align:center;
+               font-size:16px;line-height:25px;color:#EEE4DA}
+  .panel .val{position:absolute;left:0;right:0;top:25px;text-align:center;
+              font-size:20px;line-height:30px;color:#F9F6F2;font-weight:600}
+  .panel .val.bump{animation:bump .22s ease-out}
+  @keyframes bump{0%{transform:scale(1)}45%{transform:scale(1.16)}100%{transform:scale(1)}}
+
+  /* 棋盘 324x324 @ (33,89)，圆角 8，底 #BBADA0 */
+  .board{position:absolute;left:33px;top:89px;width:324px;height:324px;border-radius:8px;background:#BBADA0}
+  .cell{position:absolute;width:71px;height:71px;border-radius:6px;background:#CDC1B4}
+  .tile{position:absolute;width:71px;height:71px;border-radius:6px;
+        display:flex;align-items:center;justify-content:center;
+        font-weight:700;font-family:Helvetica,Arial,sans-serif;
+        background:transparent;color:transparent;transition:background .08s linear}
+  .tile.pop{animation:pop .13s ease-out}
+  @keyframes pop{0%{transform:scale(1)}50%{transform:scale(1.13)}100%{transform:scale(1)}}
+
+  /* 底部原先有一行状态文字（TOP_MID，y=390）—— 已按真机去掉。
+   * 顺带修掉一个布局错误：y=390 落在棋盘 89..412 里面，那行字本来就压着
+   * 棋盘最后一行格子。真机反馈「第0步那行可以不要」时一起清掉了。 */
+
+  /* 底部按钮（105 / 201，y=416，84x30，胶囊） */
+  .gbtn{position:absolute;top:416px;width:84px;height:30px;border-radius:999px;background:#8F7A66;
+        color:#F9F6F2;font-size:16px;display:flex;align-items:center;justify-content:center;
+        cursor:pointer;transition:filter .12s}
+  .gbtn:hover{filter:brightness(1.08)}
+  .gbtn:active{filter:brightness(.94)}
+
+  /* 结束 / 达成 遮罩：与棋盘同位置，底 #FAF8EF 90% */
+  .mask{position:absolute;left:33px;top:89px;width:324px;height:324px;border-radius:8px;
+        background:rgba(250,248,239,.9);display:none;flex-direction:column;align-items:center}
+  .mask.on{display:flex}
+  .mask .mt1{position:absolute;top:74px;font-size:28px;font-weight:600;color:#776E65;width:100%;text-align:center}
+  .mask .mt2{position:absolute;top:118px;font-size:20px;color:#776E65;width:100%;text-align:center}
+  .mask .mbtn{position:absolute;left:104px;width:116px;height:40px;border-radius:999px;background:#8F7A66;
+              color:#F9F6F2;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .mask .mbtn:hover{filter:brightness(1.08)}
+
+  /* 手势条示意（默认淡，勾选后明显） */
+  .bar{position:absolute;pointer-events:none;border:1px dashed #f0a020;opacity:0;transition:opacity .18s;z-index:9}
+  .bar.on{opacity:1}
+  .bar b{position:absolute;font-size:9px;background:#fff6e6;border:1px solid #f5d9a8;color:#b8730a;
+         border-radius:4px;padding:0 4px;white-space:nowrap;font-weight:500}
+  .bar.top{left:0;right:0;top:0;height:34px}
+  .bar.top b{left:6px;top:4px}
+  .bar.right{right:0;top:0;bottom:0;width:16px;border-left:1px dashed;border-right:0}
+  .bar.right b{right:4px;top:4px;writing-mode:vertical-rl}
+
+  .cap{font-size:12.5px;color:var(--tx3);text-align:center;max-width:400px}
+  .cap b{color:var(--blue)}
+
+  .keys{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 12px}
+  .k{min-width:30px;height:28px;padding:0 9px;border:1px solid var(--line);border-radius:7px;background:#fff;
+     display:inline-flex;align-items:center;justify-content:center;font-size:12.5px;color:var(--tx2)}
+
+  table{border-collapse:collapse;width:100%;font-size:12.8px}
+  th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+  th{background:#f7f9fb;font-weight:600;font-size:12.5px}
+  td code{background:#f6f8fa;font-size:12px}
+  .ok{color:var(--green);font-weight:600}
+  .bad2{color:var(--red);font-weight:600}
+  .num{font-family:ui-monospace,Menlo,Consolas,monospace}
+
+  .note{background:#fff8e9;border:1px solid #f2ddb0;border-radius:9px;padding:12px 15px;font-size:13px}
+  .note b{color:#a35d00}
+  .good{background:#f0f9f2;border:1px solid #cbe7d3;border-radius:9px;padding:12px 15px;font-size:13px}
+  .good b{color:var(--green)}
+  .badbox{background:#fdf1f1;border:1px solid #f0cfcf;border-radius:9px;padding:12px 15px;font-size:13px}
+  .badbox b{color:var(--red)}
+
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--tx2);margin:10px 0 0}
+  .chk input{width:15px;height:15px;accent-color:var(--blue)}
+
+  /* 一行 4 格的算法演示 */
+  .strip{display:flex;gap:6px;margin:8px 0}
+  .sq{width:56px;height:56px;border-radius:7px;display:flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:21px;font-family:Helvetica,Arial,sans-serif}
+  .arw{width:34px;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:17px}
+  .sqs{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .lab{font-size:12px;color:var(--tx3);min-width:74px}
+
+  pre{margin:8px 0 0;background:#f7f9fb;border:1px solid var(--line2);border-radius:8px;padding:12px 14px;
+      overflow-x:auto;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.55;color:#30363d}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:14px}
+  .seg button{border:0;background:#fff;padding:7px 15px;font-size:13px;cursor:pointer;color:var(--tx2);font-family:inherit}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button.on{background:var(--blue);color:#fff}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>2048 App — 在电脑上先把它玩通</h1>
+  <p class="lede">
+    这一页是 2048 的<b>可玩模拟</b>：屏幕尺寸 390×450、棋盘位置、格子尺寸、字号和配色，全部按固件里的
+    <code>main.c</code> 常量一比一摆的。下面那块模拟屏可以直接划 —— <b>方向键 / WASD / 鼠标拖 / 手指划</b>都行。
+    再往下有两件更值得看的事：<b>布局硬约束</b>（哪条边不能压）和<b>合并算法的对错自检</b>。
+  </p>
+
+  <div class="card">
+    <h2>试玩 <span class="sub">拖一下模拟屏，或按方向键</span></h2>
+    <div class="cols">
+      <div class="stage">
+        <div class="phone" id="phone">
+          <div class="bar top" id="bartop"><b>上划手势条 34px</b></div>
+          <div class="bar right" id="barright"><b>右滑返回条 16px</b></div>
+
+          <div class="panel" style="left:111px;top:28px">
+            <div class="cap2">分数</div><div class="val" id="vScore">0</div>
+          </div>
+          <div class="panel" style="left:199px;top:28px">
+            <div class="cap2">最佳</div><div class="val" id="vBest">0</div>
+          </div>
+
+          <div class="board" id="board"></div>
+
+          <div class="gbtn" style="left:105px" id="btnUndo">撤销</div>
+          <div class="gbtn" style="left:201px" id="btnNew">重开</div>
+
+          <div class="mask" id="mask">
+            <div class="mt1" id="mt1"></div>
+            <div class="mt2" id="mt2"></div>
+            <div class="mbtn" style="top:178px" id="mOk">再来一局</div>
+            <div class="mbtn" style="top:230px" id="mNo">重开</div>
+          </div>
+        </div>
+        <div class="cap">装机后全屏就是这个样子（底 <b>#FAF8EF</b>）。顶部两个灰棕小面板是分数/最佳，
+          <b>并排居中</b>，和棋盘之间留了 6px 的缝。
+          勾上右边的「显示手势条」能看到那两条不能碰的边。</div>
+      </div>
+
+      <div>
+        <h3>操作</h3>
+        <div class="keys">
+          <span class="k">↑</span><span class="k">↓</span><span class="k">←</span><span class="k">→</span>
+          <span class="k">W</span><span class="k">A</span><span class="k">S</span><span class="k">D</span>
+          <span class="k">拖屏幕</span>
+        </div>
+        <label class="chk"><input type="checkbox" id="showBars">显示手势条位置（顶部 34px / 右边缘 16px）</label>
+        <label class="chk"><input type="checkbox" id="noSpawn">关掉自动生成新块（= 固件的 <code>g2048_spawn 0</code>）</label>
+
+        <h3>屏幕上每一块的位置都是算出来的</h3>
+        <table>
+          <tr><th>元素</th><th>位置 / 尺寸</th><th>来源</th></tr>
+          <tr><td>棋盘</td><td class="num">x=33 y=89 324×324</td><td><code>BOARD_X=(390-324)/2</code>、<code>BOARD_Y=TOP_Y+PANEL_H+BAND_GAP</code></td></tr>
+          <tr><td>格子</td><td class="num">71×71，间距 8</td><td><code>TILE=71 GAP=8</code>，<code>324=71×4+8×5</code></td></tr>
+          <tr><td>棋盘右边界</td><td class="num">33+324 = 357</td><td>必须 &lt; 374（返回条）</td></tr>
+          <tr><td>棋盘下边界</td><td class="num">89+324 = 413</td><td>必须 ≤ 416（按钮条）</td></tr>
+          <tr><td>分数 / 最佳</td><td class="num">x=111 / 199 y=28 80×55</td><td>高 = 行高 25+30；<code>PANEL_X0=(390-168)/2</code> 居中</td></tr>
+          <tr><td>撤销 / 重开</td><td class="num">x=105 / 201 y=416 84×30</td><td><code>x0=(390-180)/2</code></td></tr>
+          <tr><td class="muted">（已删）左上角「2048」标题</td><td class="num muted">x=33 y=41</td><td>真机反馈：占住左边、逼得面板没法居中</td></tr>
+        </table>
+
+        <h3>字号是跟着数字长度变的</h3>
+        <p class="small muted">
+          格子只有 71px 宽，<code>131072</code> 这种 6 位数按 36px 会画出格子。所以
+          <code>font_for()</code> 按数量级降字号：
+          <span class="num">&lt;100→36 / &lt;1000→28 / &lt;10000→24 / &lt;100000→20 / 其余→16</span>。
+          右下角那个「摆残局」按钮会往盘上塞 <b>65536</b>，就是专门验这一条的。
+        </p>
+        <div style="margin-top:10px">
+          <button class="seg" id="btnEndgame" style="border:1px solid var(--line);background:#fff;color:var(--tx2);
+                  padding:7px 15px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit">
+            摆一个「一格 65536 + 六位数」的残局（验字号）
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>另一件容易返工的事：棋盘不能压这两条边 <span class="sub">已经在编译期卡死</span></h2>
+    <div class="cols">
+      <div>
+        <p class="small">
+          这块屏的 <code>layer_top</code> 上有两条系统手势条：<b>顶部 34px 是上划</b>，
+          <b>右边缘 x≥374 那 16px 是左滑返回</b>。
+          如果棋盘最右边压到 374，玩家想把最右列往右划，系统会当成「退出 app」——
+          现象是「某一列死活划不动」，而代码怎么看都对。
+        </p>
+        <p class="small">
+          所以这三个数写成编译期断言，不靠记性：
+        </p>
+        <pre>#if (BOARD_X + BOARD_W) &gt;= RIGHT_BAR_X   /* 357 &gt;= 374 */
+#error "board overlaps the right-edge swipe-back bar (x &gt;= 374)"
+#endif
+#if (BOARD_Y + BOARD_W) &gt; BOT_Y          /* 413 &gt; 416 */
+#error "board overlaps the bottom button bar"
+#endif
+#if (BOARD_X &lt; 20)
+#error "board overlaps the left-edge gesture bar (x &lt; 20)"
+#endif</pre>
+        <p class="small">
+          同一招也用在「顶部信息条」上。这块真机上出过<b>两次</b>事：先是
+          <b>汉字标题和分数叠在一起</b>（根子是 label 的高度是<b>行高</b>不是字号，
+          16px 的 label 实际占 25px），后来是<b>分数框底部压在棋盘上</b> ——
+          那其实不是"真叠了"，是余量正好 <b>0px</b>，两个 <code>#BBADA0</code>
+          的方块贴在一起，边线糊成一条，看起来就是压上去了。
+        </p>
+        <p class="small">
+          <b>所以棋盘的位置现在改成"算"出来的，不再手填</b>：
+          <code>BOARD_Y = TOP_Y + PANEL_H + BAND_GAP</code>。
+          想把面板往上挪就只改 <code>TOP_Y</code>，棋盘自己跟着走 ——
+          间距由构造保证，"又贴到一起"不可能再发生。
+        </p>
+        <pre>#define LINE_H(size) ((size) + (size) / 3 + 4)   /* SDK 的行高公式 */
+
+#define TOP_Y       28                           /* 面板顶边 */
+#define PANEL_H     (LH_CAPTION + LH_VALUE)      /* 25 + 30 = 55 */
+#define BAND_GAP    6                            /* 面板底 -> 棋盘顶的缝 */
+#define BOARD_Y     (TOP_Y + PANEL_H + BAND_GAP) /* 28+55+6 = 89（没动）*/
+
+#define PANEL_TOTAL (PANEL_W * 2 + PANEL_GAP)    /* 168 */
+#define PANEL_X0    ((390 - PANEL_TOTAL) / 2)    /* 111：两个面板整体居中 */
+
+#if (BAND_GAP &lt; 4)
+#error "less than 4px between the score panels and the board: they will look glued together"
+#endif
+#if ((PANEL_X0 + PANEL_X1 + PANEL_W - 1) / 2 != (390 - 1) / 2)
+#error "score panels are not horizontally centered"
+#endif
+#if (TOP_Y + PANEL_H) &gt; BOARD_Y
+#error "top info band does not fit above the board: caption/value labels will overlap"
+#endif
+#if (CAP_Y + LH_CAPTION) &gt; VAL_Y
+#error "score panel: caption and value text boxes overlap"
+#endif
+#if (VAL_Y + LH_VALUE) &gt; PANEL_H
+#error "score panel: value text overflows the panel bottom"
+#endif</pre>
+        <p class="small muted" style="margin-top:10px">
+          以后想把格子改大一点（比如 <code>TILE</code> 从 71 改到 75），只要压到边，<b>编译就直接失败</b>，
+          不用等人玩到某一列才发现。
+        </p>
+      </div>
+      <div>
+        <table>
+          <tr><th>约束</th><th>当前值</th><th>限值</th><th>余量</th></tr>
+          <tr><td>棋盘右边</td><td class="num">357</td><td class="num">&lt; 374</td><td class="ok">17px</td></tr>
+          <tr><td>棋盘下边</td><td class="num">413</td><td class="num">≤ 416</td><td class="ok">3px</td></tr>
+          <tr><td>棋盘左边</td><td class="num">33</td><td class="num">≥ 20</td><td class="ok">13px</td></tr>
+          <tr><td>面板底 → 棋盘顶</td><td class="num">28+55 → 89</td><td class="num">≥ 4px</td><td class="ok">6px（这次修的）</td></tr>
+          <tr><td>面板对中点</td><td class="num">(111+278)/2 = 194</td><td class="num">= 194</td><td class="ok">居中</td></tr>
+          <tr><td>格子边长</td><td class="num">71</td><td class="num">≤ 71</td><td>0px（已经到顶）</td></tr>
+        </table>
+        <div class="note" style="margin-top:12px">
+          <b>面板和棋盘之间那 6px 是这次专门留出来的。</b>
+          改之前是 <b>0px</b> —— 两个同色方块直接贴住，真机反馈就是
+          「分数框和最佳框底部和方格框重叠了」。现在这个值由
+          <code>BAND_GAP</code> 单独控制，并且有
+          <code>#if (BAND_GAP &lt; 4) #error</code> 兜着，谁也别想再把它调回 0。
+          <br><br>
+          <b>格子边长 71 仍然是 0 余量</b>：<code>89 + 4×71 + 8×5 = 413 ≤ 416</code>
+          是这块屏能取到的最大值。
+          也就是说 —— <b>再想往这块屏上加东西，必须先动 <code>TOP_Y</code> / <code>BAND_GAP</code>
+          或者底部按钮条</b>，单独改 <code>TILE</code> 会直接编译不过。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>合并算法：这里错一次，整局就都不对了 <span class="sub">下面是对错并排</span></h2>
+    <p class="small">
+      2048 的规则只有一条容易写错的：<b>同一次滑动里，每块最多参与一次合并</b>。
+      所以 <code>2 2 4</code> 往左划应该是 <code>4 4</code>，<b>不是</b> <code>8</code>。
+      这条在屏幕上看不出区别（都是「数字变大了」），但在一次滑动里就会把分数算错、把局面带偏。
+    </p>
+
+    <div class="seg" id="segCase">
+      <button data-case="0" class="on">2 2 4 0</button>
+      <button data-case="1">4 4 2 2</button>
+      <button data-case="2">4 4 4 4</button>
+      <button data-case="3">2 2 2 2</button>
+      <button data-case="4">2 4 2 4</button>
+    </div>
+
+    <table>
+      <tr>
+        <th style="width:100px">输入（一条线，往左）</th>
+        <th style="width:100px">正确结果</th>
+        <th style="width:100px">错①&nbsp;下标不动</th>
+        <th style="width:100px">错②&nbsp;<span class="num">i += 2</span></th>
+        <th>说明</th>
+      </tr>
+      <tr>
+        <td><div class="sqs" id="inRow"></div></td>
+        <td><div class="sqs" id="okRow"></div><div class="lab ok" id="okTag"></div></td>
+        <td><div class="sqs" id="bad1Row"></div></td>
+        <td><div class="sqs" id="bad2Row"></div></td>
+        <td class="small muted" id="whyText"></td>
+      </tr>
+    </table>
+    <p class="small muted">
+      「错①」和「错②」不是两种笔误 —— 是<b>两个方向</b>的错：一个走得太少（原地打转），
+      一个走得太快（跳过一对）。两种在屏幕上都只表现为"数字变大了"。
+    </p>
+
+    <h3>错在哪</h3>
+    <div class="badbox">
+      <b>错① 合并后下标不动。</b>
+      合并会当场把 <code>out[i]</code> 变成两倍，并把后面几格往前挪 —— 于是 <code>out[i]</code>
+      的新值<b>又和刚挪过来的那个数相等</b>，下标还停在原地，就再合一次。
+      <span class="num">2 2 4 0</span> → 合出 <span class="num">4</span>、第 1 格又是个 <span class="num">4</span>
+      → 下标没走 → 再合 → <span class="bad2">8</span>。
+    </div>
+    <div class="note" style="margin-top:10px">
+      <b>错② 合并后 <code>i += 2</code>（就在这份固件里犯过）。</b>
+      这个反而更隐蔽：<b>它是看着最"保险"的写法</b> —— "合并过的块不能再合，那我跳过两格不就行了？"
+      但上面已经把后面几格<b>往前挪了一格</b>，下一个该比较的对子从 <span class="num">(i, i+1)</span>
+      变成了 <span class="num">(i+1, i+2)</span>。<code>+2</code> 正好把它跳过去，
+      于是 <span class="num">4 4 2 2</span> 算成 <span class="num">8 2 2</span>（对的是 <span class="num">8 4</span>）、
+      <span class="num">4 4 4 4</span> 算成 <span class="num">8 4 4</span>（对的是 <span class="num">8 8</span>）。
+      <br><br>
+      <b>这个 bug 是被下面那张自检表抓出来的</b> —— 我第一版固件里写的就是 <code>i += 2</code>，
+      已经编好烧进表里了，是这张页面的自检让它现的原形。修正版：合并后<b>只走一格</b>，
+      靠"挪位"而不是"跳下标"来保证不重复合并。
+    </div>
+    <p class="small" style="margin-top:12px">固件里现在的写法（<code>main.c</code> 的 <code>line_step()</code>）：</p>
+    <pre>/* ② 相邻相同就合并 */
+i = 0;
+while (i &lt; N - 1)
+{
+    if (out[i] &amp;&amp; out[i] == out[i + 1])
+    {
+        out[i] *= 2;
+        *gained += out[i];
+        for (j = i + 1; j &lt; N - 1; j++)     /* 后面的往前挪一格 */
+        {
+            out[j] = out[j + 1];
+        }
+        out[N - 1] = 0;
+    }
+    i += 1;              /* ⚠ 就一格。走两格会跳过挪过来的那一对 */
+}</pre>
+    <div class="good" style="margin-top:12px">
+      <b>怎么保证不再犯：</b>别靠读代码。把 <span class="num">[4,4,2,2]</span>、
+      <span class="num">[4,4,4,4]</span>、<span class="num">[2,2,2,2]</span> 这三条写进自检 ——
+      错①会在第一条上露馅，错②会在第一、三条上露馅。
+      只用 <span class="num">2 2 4 0</span> 一条是测不出错②的。
+    </div>
+
+    <h3>四个方向共用同一段合并逻辑</h3>
+    <p class="small muted">
+      上 / 右 / 下 / 左 不是写四遍。做法是：<b>按方向把每一行（或每一列）抽成一条"从后往前"的线</b>，
+      交给同一个 <code>line_step()</code>，再按同样的顺序写回去。四份重复代码迟早会有一份改漏。
+    </p>
+
+    <h3>页面里的自检</h3>
+    <p class="small muted">下面这些用例是本页 JS 里跑出来的，逻辑是从 <code>line_step()</code> 直译的：</p>
+    <div id="selftest"></div>
+  </div>
+
+  <div class="card">
+    <h2>装机之后怎么自己验 <span class="sub">串口命令（不用猜，一条条打）</span></h2>
+    <p class="small">
+      2048 在串口留了一整套命令。最要紧的是 <code>g2048_spawn 0</code> —— 关掉自动生成新块之后，
+      棋盘就完全可控了，可以摆一个确定的残局，再验证合并到底是 <code>4 4</code> 还是 <code>8</code>。
+    </p>
+    <table>
+      <tr><th style="width:200px">命令</th><th>干什么</th></tr>
+      <tr><td><code>g2048_info</code></td><td>只读打印：棋盘 4 行、分数、最佳、best、moves、max、状态位（over/won/mask/snap/spawn）、防息屏定时器指针、触摸计数，以及<b>顶部两个面板的真实几何 + 有没有重叠</b>（<code>panel[score] … gap=N OK</code> / <code>score-panel overlap check: PASS</code>）</td></tr>
+      <tr><td><code>g2048_ui</code></td><td>直接切到这个 app（等于点蜂窝里的图标）</td></tr>
+      <tr><td><code>g2048_new</code></td><td>开新局</td></tr>
+      <tr><td><code>g2048_clear</code></td><td>清空棋盘（配合 spawn 0 用）</td></tr>
+      <tr><td><code>g2048_set &lt;r&gt; &lt;c&gt; &lt;v&gt;</code></td><td>往 (r,c) 摆一个值，例如 <code>g2048_set 0 0 2</code></td></tr>
+      <tr><td><code>g2048_move &lt;u|r|d|l&gt;</code></td><td>走一步。⚠ 会走 GUI 线程（<code>lv_async_call</code>），不是直接改内存</td></tr>
+      <tr><td><code>g2048_spawn &lt;0|1&gt;</code></td><td>开关「自动生成新块」。验算法时必须先 <code>0</code></td></tr>
+      <tr><td><code>g2048_seed &lt;n&gt;</code></td><td>固定随机种子（新块位置可复现）</td></tr>
+      <tr><td><code>g2048_undo</code></td><td>撤销一步</td></tr>
+      <tr><td><code>g2048_auto &lt;n&gt;</code></td><td>自动走 n 步（压力测试，看会不会崩）</td></tr>
+      <tr><td><code>g2048_log &lt;0|1&gt;</code></td><td>打开触摸日志：<code>press x=… y=…</code> / <code>release dx=… dy=… dt=…ms</code> / <code>swipe -&gt; 左</code></td></tr>
+    </table>
+
+    <h3>验证「2 2 4 不能变成 8」的完整流程</h3>
+    <pre>g2048_ui                 # 进 app
+g2048_spawn 0            # ⚠ 关掉自动生成，不然后面摆的局会被新块污染
+g2048_clear
+g2048_set 1 0 2          # 第 2 行: 2 2 4 0
+g2048_set 1 1 2
+g2048_set 1 2 4
+g2048_info               # 确认摆对了
+g2048_move l             # 往左划
+g2048_info               # 期望第 2 行变成  4 4 0 0 ，分数 +8
+                         # 如果打出来是 8 0 0 0，就是 i += 2 写成了 i += 1</pre>
+    <div class="good" style="margin-top:12px">
+      <b>为什么必须先 spawn 0：</b>开着自动生成的话，<code>move</code> 之后会随机冒出一个 2 或 4，
+      打出来的棋盘既有你的结果又有新块，<b>没法一眼判对错</b>，很容易得出「算法好像是对的」这种假结论。
+    </div>
+    <div class="note" style="margin-top:12px">
+      <b>触摸日志怎么用：</b>如果出现「划了没反应」，先 <code>g2048_log 1</code>。
+      · 只有 <code>press</code> 没有 <code>release</code> → 抬起事件被别的东西吃了；
+      · 有 <code>release</code> 但 <code>dx/dy</code> 都很小 → 手指没划够 26px（门槛在这）；
+      · 有 <code>release</code> 也有位移但没有 <code>swipe</code> → 时长超过 1000ms，被判成「慢拖」。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>这一版踩过的坑 <span class="sub">留给下次加 app 用</span></h2>
+    <table>
+      <tr><th style="width:210px">坑</th><th>为什么会踩 / 怎么避开</th></tr>
+      <tr>
+        <td>图标传 NULL，蜂窝里没这一格</td>
+        <td>代码全对、编译也过，只是主菜单不显示。<code>BUILTIN_APP_EXPORT(名字, 图标, app id, 入口)</code> 第二参必须给 <code>LV_EXT_IMG_GET(img_xxx)</code>。</td>
+      </tr>
+      <tr>
+        <td>图标 PNG 放哪、要不要改构建脚本</td>
+        <td><code>src/resource/images/common/ezip/</code> 下丢一张 PNG 就行，构建脚本会 Glob 出来编成同名符号。<b>不用改任何 SConscript</b>。</td>
+      </tr>
+      <tr>
+        <td>i18n 少一行 → 编译报「has no member」</td>
+        <td><code>LV_EXT_STR_ID(game2048)</code> 会去查 <code>lang_translation_t</code>，而这个结构体是构建时从 <code>strings/*.json</code> <b>生成</b>的。两个 json 都要加键。</td>
+      </tr>
+      <tr>
+        <td>防息屏定时器不删 → 别的 app 也息不了屏</td>
+        <td>2048 是「盯着想」的游戏，必须自己挂 1s 定时器 <code>lv_disp_trig_activity()</code>；但 <b>on_pause / on_stop 里一定要 <code>lv_timer_del</code></b>，否则它在后台继续把系统钉醒。</td>
+      </tr>
+      <tr>
+        <td>子对象吃掉滑动</td>
+        <td>棋盘、16 个格子、label 全部 <code>lv_obj_clear_flag(..., LV_OBJ_FLAG_CLICKABLE)</code>，只让 root 可点。命中层越薄越不容易出怪事。</td>
+      </tr>
+      <tr>
+        <td>退出再进来棋盘空了</td>
+        <td><code>on_start</code> 里判断 <code>tile_count()</code>：非空就重画，不重开。棋盘数值刻意不在 <code>on_stop</code> 里清。</td>
+      </tr>
+    </table>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+   *  布局常量 —— 与 src/gui_apps/game2048/main.c 一一对应
+   * ============================================================ */
+  var N = 4, GAP = 8, TILE = 71;
+  var BOARD_W = TILE * N + GAP * (N + 1);          /* 324 */
+  var BOARD_X = (390 - BOARD_W) / 2;               /* 33 */
+
+  /* 顶部信息条：两个面板并排、整体水平居中。
+   * 面板高 = 行高之和（16px 的 label 是 25px 高，20px 的是 30px）。
+   * ⚠ BOARD_Y **由信息条算出来**，不手填 —— 和固件完全一样。
+   *   手填一个 89 正是 2026-09-23「分数框底部压在棋盘上」那次返工的根源：
+   *   两个数各自都对，中间却一个像素的缝都没有。 */
+  var TOP_Y = 28, PANEL_H = 55, LH_CAPTION = 25;
+  var PANEL_W = 80, PANEL_GAP = 8;
+  var PANEL_TOTAL = PANEL_W * 2 + PANEL_GAP;       /* 168 */
+  var PANEL_X0 = (390 - PANEL_TOTAL) / 2;          /* 111 */
+  var PANEL_X1 = PANEL_X0 + PANEL_W + PANEL_GAP;   /* 199 */
+  var BAND_GAP = 6;
+  var BOARD_Y = TOP_Y + PANEL_H + BAND_GAP;        /* 28 + 55 + 6 = 89 */
+  var SWIPE_MIN_PX = 26, SWIPE_MAX_MS = 1000;      /* 与固件一致 */
+  var WIN_VALUE = 2048;
+
+  /* 配色：2048 官方牌面 */
+  var STYLE = {
+    2:      ["#EEE4DA", 1],   4:      ["#EDE0C8", 1],
+    8:      ["#F2B179", 0],   16:     ["#F59563", 0],
+    32:     ["#F67C5F", 0],   64:     ["#F65E3B", 0],
+    128:    ["#EDCF72", 0],   256:    ["#EDCC61", 0],
+    512:    ["#EDC850", 0],   1024:   ["#EDC53F", 0],
+    2048:   ["#EDC22E", 0],   4096:   ["#3C3A32", 0],
+    8192:   ["#3C3A32", 0],   16384:  ["#3C3A32", 0],
+    32768:  ["#3C3A32", 0],   65536:  ["#3C3A32", 0],
+    131072: ["#3C3A32", 0]
+  };
+  var C_DARKTEXT = "#776E65", C_LIGHTTEXT = "#F9F6F2";
+
+  function styleOf(v) {
+    if (STYLE[v]) { return STYLE[v]; }
+    return ["#3C3A32", 0];
+  }
+  function fontFor(v) {
+    if (v < 100)    { return 36; }
+    if (v < 1000)   { return 28; }
+    if (v < 10000)  { return 24; }
+    if (v < 100000) { return 20; }
+    return 16;
+  }
+
+  /* ============================================================
+   *  算法 —— lineStep / boardSlide 从 C 直译
+   * ============================================================ */
+
+  /* 正确版：合并后下标只走一格 —— 靠"挪位 + 走一格"保证合并出来的那颗不再被看上。
+     ⚠ 不是 i += 2。i += 2 看着更保险，其实会跳过挪过来的那一对：
+       [4,4,2,2] 会算成 [8,2,2] 而不是 [8,4]。
+     这个 bug 就是本页的自检抓出来的，固件里同一处当时也写错了。 */
+  function lineStep(line) {
+    var out = [0, 0, 0, 0], i, j, n = 0, gained = 0, changed = false, merged = [];
+
+    for (i = 0; i < N; i++) {
+      if (line[i]) { out[n++] = line[i]; }
+    }
+    while (n < N) { out[n++] = 0; }
+
+    i = 0;
+    while (i < N - 1) {
+      if (out[i] && out[i] === out[i + 1]) {
+        out[i] *= 2;
+        gained += out[i];
+        merged.push(i);
+        for (j = i + 1; j < N - 1; j++) { out[j] = out[j + 1]; }
+        out[N - 1] = 0;
+      }
+      i += 1;                        /* ⚠ 就一格 */
+    }
+    for (i = 0; i < N; i++) {
+      if (line[i] !== out[i]) { changed = true; }
+    }
+    return { line: out, gained: gained, changed: changed, merged: merged };
+  }
+
+  /* 错误版 ①：合并后下标**不动** —— 刚合出来的 4 又被拿去和挪过来的 4 合。
+     2 2 4 0 -> 8 0 0 0（对的是 4 4 0 0） */
+  function lineStepBad(line) {
+    var out = [0, 0, 0, 0], i, j, n = 0;
+
+    for (i = 0; i < N; i++) {
+      if (line[i]) { out[n++] = line[i]; }
+    }
+    while (n < N) { out[n++] = 0; }
+
+    i = 0;
+    while (i < N - 1) {
+      if (out[i] && out[i] === out[i + 1]) {
+        out[i] *= 2;
+        for (j = i + 1; j < N - 1; j++) { out[j] = out[j + 1]; }
+        out[N - 1] = 0;
+        /* 少了 i += 1 —— bug 就在这 */
+      } else {
+        i += 1;
+      }
+    }
+    return out;
+  }
+
+  /* 错误版 ②：合并后 i += 2 —— 看着"更保险"，其实跳过挪过来的那一对。
+     4 4 2 2 -> 8 2 2 0（对的是 8 4 0 0）；4 4 4 4 -> 8 4 4 0（对的是 8 8 0 0） */
+  function lineStepSkip2(line) {
+    var out = [0, 0, 0, 0], i, j, n = 0;
+
+    for (i = 0; i < N; i++) {
+      if (line[i]) { out[n++] = line[i]; }
+    }
+    while (n < N) { out[n++] = 0; }
+
+    i = 0;
+    while (i < N - 1) {
+      if (out[i] && out[i] === out[i + 1]) {
+        out[i] *= 2;
+        for (j = i + 1; j < N - 1; j++) { out[j] = out[j + 1]; }
+        out[N - 1] = 0;
+        i += 2;                      /* bug：跳过了挪到 i+1 / i+2 的那一对 */
+      } else {
+        i += 1;
+      }
+    }
+    return out;
+  }
+
+  /* dir: 0=上 1=右 2=下 3=左 */
+  function boardSlide(board, dir) {
+    var i, j, line, r, gained = 0, changed = false, mergedCells = [];
+
+    for (i = 0; i < N; i++) {
+      line = [];
+      for (j = 0; j < N; j++) {
+        if      (dir === 0) { line[j] = board[j][i]; }
+        else if (dir === 2) { line[j] = board[N - 1 - j][i]; }
+        else if (dir === 3) { line[j] = board[i][j]; }
+        else                { line[j] = board[i][N - 1 - j]; }
+      }
+
+      var res = lineStep(line);
+      if (res.changed) { changed = true; }
+      gained += res.gained;
+
+      for (j = 0; j < N; j++) {
+        if      (dir === 0) { r = j; }
+        else if (dir === 2) { r = N - 1 - j; }
+        else                { r = i; }
+        var c;
+        if      (dir === 0 || dir === 2) { c = i; }
+        else if (dir === 3)              { c = j; }
+        else                             { c = N - 1 - j; }
+
+        board[r][c] = res.line[j];
+      }
+      /* 合并位置换算成格子坐标，供弹一下动画用 */
+      for (var k = 0; k < res.merged.length; k++) {
+        var lj = res.merged[k], rr, cc;
+        if      (dir === 0) { rr = lj;         cc = i; }
+        else if (dir === 2) { rr = N - 1 - lj; cc = i; }
+        else if (dir === 3) { rr = i;          cc = lj; }
+        else                { rr = i;          cc = N - 1 - lj; }
+        mergedCells.push([rr, cc]);
+      }
+    }
+    return { changed: changed, gained: gained, merged: mergedCells };
+  }
+
+  function movesLeft(board) {
+    var r, c;
+    for (r = 0; r < N; r++) {
+      for (c = 0; c < N; c++) {
+        if (!board[r][c]) { return true; }
+        if (r + 1 < N && board[r][c] === board[r + 1][c]) { return true; }
+        if (c + 1 < N && board[r][c] === board[r][c + 1]) { return true; }
+      }
+    }
+    return false;
+  }
+
+  /* ============================================================
+   *  游戏状态
+   * ============================================================ */
+  var board = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+  var snap = null, score = 0, best = 0, over = false, won = false, continued = false;
+  var lastInfo = "滑动开始";
+  /* 与固件 g2048_spawn 对应：关掉之后棋盘完全可控，验算法才有意义 */
+  var spawnOn = true;
+
+  function emptyCells() {
+    var out = [], r, c;
+    for (r = 0; r < N; r++) {
+      for (c = 0; c < N; c++) {
+        if (!board[r][c]) { out.push([r, c]); }
+      }
+    }
+    return out;
+  }
+
+  function spawn() {
+    if (!spawnOn) { return; }
+    var e = emptyCells();
+    if (!e.length) { return; }
+    var p = e[Math.floor(Math.random() * e.length)];
+    board[p[0]][p[1]] = (Math.random() < 0.9) ? 2 : 4;
+  }
+
+  function newGame() {
+    board = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    score = 0; over = false; won = false; continued = false;
+    snap = null;
+    /* 重开总是恢复自动生成 —— 别让测试用的开关漏到正常玩法里 */
+    spawnOn = true;
+    spawn(); spawn();
+    lastInfo = "新开一局";
+    render(true);
+  }
+
+  function doMove(dir) {
+    if (over) { return; }
+    if (won && !continued) { return; }         /* 达成后先选「继续玩」 */
+
+    var before = board.map(function (row) { return row.slice(); });
+    var beforeScore = score;
+
+    var res = boardSlide(board, dir);
+    if (!res.changed) {
+      lastInfo = "这个方向划不动";
+      render(false);
+      return;
+    }
+
+    /* ⚠ 只有真的动了才存快照（撤销一步） */
+    snap = { board: before, score: beforeScore };
+    score += res.gained;
+    if (score > best) {
+      best = score;
+      try { localStorage.setItem("hsp-2048-best", String(best)); } catch (e) {}
+    }
+
+    spawn();
+
+    if (!won) {
+      for (var r = 0; r < N; r++) {
+        for (var c = 0; c < N; c++) {
+          if (board[r][c] >= WIN_VALUE) { won = true; }
+        }
+      }
+    }
+    if (!movesLeft(board)) { over = true; }
+
+    var name = ["上", "右", "下", "左"][dir];
+    lastInfo = "上一步 " + name + (res.gained ? "  +" + res.gained : "");
+    render(false, res.merged);
+  }
+
+  function undo() {
+    if (!snap) { lastInfo = "没有可撤销的一步"; render(false); return; }
+    board = snap.board.map(function (row) { return row.slice(); });
+    score = snap.score;
+    snap = null;
+    over = false;
+    lastInfo = "已撤销一步";
+    render(true);
+  }
+
+  /* ============================================================
+   *  渲染
+   * ============================================================ */
+  var boardEl = document.getElementById("board");
+  var tileEls = [], cellEls = [];
+
+  (function buildBoard() {
+    var r, c;
+    for (r = 0; r < N; r++) {
+      cellEls[r] = []; tileEls[r] = [];
+      for (c = 0; c < N; c++) {
+        var x = GAP + c * (TILE + GAP), y = GAP + r * (TILE + GAP);
+
+        var cell = document.createElement("div");
+        cell.className = "cell";
+        cell.style.left = x + "px"; cell.style.top = y + "px";
+        boardEl.appendChild(cell);
+        cellEls[r][c] = cell;
+
+        var t = document.createElement("div");
+        t.className = "tile";
+        t.style.left = x + "px"; t.style.top = y + "px";
+        boardEl.appendChild(t);
+        tileEls[r][c] = t;
+      }
+    }
+  }());
+
+  function paintTile(el, v, pop) {
+    if (!v) {
+      el.style.background = "transparent";
+      el.style.color = "transparent";
+      el.textContent = "";
+      return;
+    }
+    var st = styleOf(v);
+    el.style.background = st[0];
+    el.style.color = st[1] ? C_DARKTEXT : C_LIGHTTEXT;
+    el.style.fontSize = fontFor(v) + "px";
+    el.textContent = String(v);
+    if (pop) {
+      el.classList.remove("pop");
+      void el.offsetWidth;         /* 强制重排，否则动画不会重放 */
+      el.classList.add("pop");
+    }
+  }
+
+  function render(force, merged) {
+    var r, c, key = {}, i;
+    if (merged) { for (i = 0; i < merged.length; i++) { key[merged[i][0] + "," + merged[i][1]] = 1; } }
+
+    for (r = 0; r < N; r++) {
+      for (c = 0; c < N; c++) {
+        paintTile(tileEls[r][c], board[r][c], force || key[r + "," + c]);
+      }
+    }
+
+    var vScore = document.getElementById("vScore"), vBest = document.getElementById("vBest");
+    vScore.textContent = String(score);
+    vBest.textContent = String(best);
+
+    var mask = document.getElementById("mask");
+    if (over) {
+      document.getElementById("mt1").textContent = "无路可走";
+      document.getElementById("mt2").textContent = "得分 " + score + "　最高块 " + maxTile();
+      document.getElementById("mOk").textContent = "再来一局";
+      document.getElementById("mNo").style.display = "flex";
+      mask.classList.add("on");
+    } else if (won && !continued) {
+      document.getElementById("mt1").textContent = "达成 2048！";
+      document.getElementById("mt2").textContent = "要继续冲更高吗";
+      document.getElementById("mOk").textContent = "继续玩";
+      document.getElementById("mNo").textContent = "重开";
+      mask.classList.add("on");
+    } else {
+      mask.classList.remove("on");
+    }
+
+    /* 给冒烟测试用的观测口：全是 ASCII，避免中文编码把测试搞成假错 */
+    if (window.__dbg) {
+      window.__dbg.score    = score;
+      window.__dbg.best     = best;
+      window.__dbg.over     = over ? 1 : 0;
+      window.__dbg.won      = won ? 1 : 0;
+      window.__dbg.mask     = mask.classList.contains("on") ? 1 : 0;
+      window.__dbg.maxTile  = maxTile();
+      window.__dbg.tiles    = board.map(function (row) { return row.join(","); }).join("|");
+      /* 底部那行状态文字按真机去掉了，这里只留个观测口给测试看最后一步干了啥 */
+      window.__dbg.last     = lastInfo;
+      window.__dbg.painted  = (function () {
+        /* 真正画上字的格子数 —— 用来验证"改完数据界面跟着变了"，
+           而不是只看内存里的 board。 */
+        var n = 0, rr, cc;
+        for (rr = 0; rr < N; rr++) {
+          for (cc = 0; cc < N; cc++) {
+            if (tileEls[rr][cc].textContent) { n++; }
+          }
+        }
+        return n;
+      }());
+    }
+  }
+
+  function maxTile() {
+    var m = 0, r, c;
+    for (r = 0; r < N; r++) { for (c = 0; c < N; c++) { if (board[r][c] > m) { m = board[r][c]; } } }
+    return m;
+  }
+
+  /* ============================================================
+   *  交互
+   * ============================================================ */
+  var phone = document.getElementById("phone");
+  var pressX = 0, pressY = 0, pressT = 0, pressed = false;
+
+  phone.addEventListener("pointerdown", function (ev) {
+    pressed = true; pressX = ev.clientX; pressY = ev.clientY; pressT = Date.now();
+    /* 合成事件（自动化测试）里这个 pointerId 不是真实活动指针，
+       setPointerCapture 会抛 NotFoundError —— 抓住了就不影响正常逻辑 */
+    try { phone.setPointerCapture(ev.pointerId); } catch (err) {}
+  });
+  phone.addEventListener("pointerup", function (ev) {
+    if (!pressed) { return; }
+    pressed = false;
+    var dx = Math.abs(ev.clientX - pressX), dy = Math.abs(ev.clientY - pressY);
+    var dt = Date.now() - pressT;
+    if ((dx >= SWIPE_MIN_PX || dy >= SWIPE_MIN_PX) && dt < SWIPE_MAX_MS) {
+      if (dx >= dy) { doMove(ev.clientX > pressX ? 1 : 3); }
+      else          { doMove(ev.clientY > pressY ? 2 : 0); }
+    }
+  });
+  phone.addEventListener("pointercancel", function () { pressed = false; });
+
+  document.addEventListener("keydown", function (ev) {
+    var k = ev.key.toLowerCase(), dir = -1;
+    if (k === "arrowup" || k === "w")    { dir = 0; }
+    if (k === "arrowright" || k === "d") { dir = 1; }
+    if (k === "arrowdown" || k === "s")  { dir = 2; }
+    if (k === "arrowleft" || k === "a")  { dir = 3; }
+    if (dir >= 0) { ev.preventDefault(); doMove(dir); }
+  });
+
+  document.getElementById("btnUndo").addEventListener("click", function (e) { e.stopPropagation(); undo(); });
+  document.getElementById("btnNew").addEventListener("click", function (e) { e.stopPropagation(); newGame(); });
+  document.getElementById("mOk").addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (won && !continued) { continued = true; render(false); } else { newGame(); }
+  });
+  document.getElementById("mNo").addEventListener("click", function (e) { e.stopPropagation(); newGame(); });
+
+  document.getElementById("noSpawn").addEventListener("change", function () { spawnOn = !this.checked; });
+  document.getElementById("showBars").addEventListener("change", function () {
+    document.getElementById("bartop").classList.toggle("on", this.checked);
+    document.getElementById("barright").classList.toggle("on", this.checked);
+  });
+
+  document.getElementById("btnEndgame").addEventListener("click", function () {
+    board = [[65536, 32768, 16384, 8192],
+             [4096, 2048, 1024, 512],
+             [256, 128, 64, 32],
+             [2, 4, 0, 0]];
+    score = 131068; over = false; won = true; continued = true; snap = null;
+    lastInfo = "残局：看 65536 / 131072 的字号";
+    render(true);
+  });
+
+  /* ============================================================
+   *  算法演示条
+   * ============================================================ */
+  var CASES = [
+    { in: [2, 2, 4, 0], why: "两两合：第 1 对 -> 4，单出来的 4 落单。错①会在这一条上把两个 4 又合成 8" },
+    { in: [4, 4, 2, 2], why: "前一对合 8、后一对合 4。错②会把后一对跳过 —— 这是最能区分两者的用例" },
+    { in: [4, 4, 4, 4], why: "两对都该合：8 8。错②只合出前一对，后一对被跳过" },
+    { in: [2, 2, 2, 2], why: "两两合并 -> 4 4（不是 8，也不是 4 2 2）" },
+    { in: [2, 4, 2, 4], why: "没有相邻相同的，只发生位移，不该合并" }
+  ];
+
+  function sq(v, size) {
+    var d = document.createElement("div");
+    d.className = "sq";
+    if (size) { d.style.width = size + "px"; d.style.height = size + "px"; }
+    if (!v) {
+      d.style.background = "#CDC1B4"; d.style.color = "transparent"; d.textContent = "0";
+      return d;
+    }
+    var st = styleOf(v);
+    d.style.background = st[0];
+    d.style.color = st[1] ? C_DARKTEXT : C_LIGHTTEXT;
+    d.style.fontSize = Math.min(fontFor(v), 21) + "px";
+    d.textContent = String(v);
+    return d;
+  }
+
+  function renderCase(idx) {
+    var cs = CASES[idx];
+    var ok  = lineStep(cs.in.slice()).line;
+    var b1  = lineStepBad(cs.in.slice());
+    var b2  = lineStepSkip2(cs.in.slice());
+
+    function fill(id, arr) {
+      var host = document.getElementById(id);
+      host.innerHTML = "";
+      for (var i = 0; i < 4; i++) { host.appendChild(sq(arr[i])); }
+    }
+    fill("inRow", cs.in);
+    fill("okRow", ok);
+    fill("bad1Row", b1);
+    fill("bad2Row", b2);
+    document.getElementById("whyText").textContent = cs.why;
+
+    var same1 = ok.join(",") === b1.join(",");
+    var same2 = ok.join(",") === b2.join(",");
+    document.getElementById("okTag").textContent =
+      (same1 ? "错①在这条上看不出来　" : "错①会算错　") +
+      (same2 ? "错②在这条上也看不出来" : "错②会算错");
+  }
+
+  var seg = document.getElementById("segCase");
+  seg.addEventListener("click", function (ev) {
+    if (ev.target.tagName !== "BUTTON") { return; }
+    var btns = seg.querySelectorAll("button");
+    for (var i = 0; i < btns.length; i++) { btns[i].classList.remove("on"); }
+    ev.target.classList.add("on");
+    renderCase(parseInt(ev.target.getAttribute("data-case"), 10));
+  });
+
+  /* ============================================================
+   *  自检：lineStep 的期望值 + 全盘滑动
+   * ============================================================ */
+  function runSelfTest() {
+    var cases = [
+      [[2, 2, 4, 0], [4, 4, 0, 0]],
+      [[2, 2, 2, 2], [4, 4, 0, 0]],
+      [[4, 4, 2, 2], [8, 4, 0, 0]],      /* 错② 在这一条上露馅 */
+      [[4, 4, 4, 4], [8, 8, 0, 0]],      /* 错② 在这一条上也露馅 */
+      [[2, 2, 4, 4], [4, 8, 0, 0]],
+      [[4, 4, 4, 0], [8, 4, 0, 0]],
+      [[2, 2, 4, 8], [4, 4, 8, 0]],
+      [[2, 4, 2, 4], [2, 4, 2, 4]],
+      [[0, 0, 0, 2], [2, 0, 0, 0]],
+      [[2, 0, 2, 2], [4, 2, 0, 0]],
+      [[0, 0, 0, 0], [0, 0, 0, 0]],
+      [[2, 2, 2, 0], [4, 2, 0, 0]]
+    ];
+    var rows = "", pass = 0, i;
+
+    for (i = 0; i < cases.length; i++) {
+      var got = lineStep(cases[i][0].slice()).line;
+      var want = cases[i][1];
+      var ok = got.join(",") === want.join(",");
+      if (ok) { pass++; }
+      rows += "<tr><td class='num'>" + JSON.stringify(cases[i][0]) + "</td>" +
+              "<td class='num'>" + JSON.stringify(want) + "</td>" +
+              "<td class='num'>" + JSON.stringify(got) + "</td>" +
+              "<td class='" + (ok ? "ok" : "bad2") + "'>" + (ok ? "PASS" : "FAIL") + "</td></tr>";
+    }
+
+    /* 整盘：⚠ 方向容易搞混 —— 左/右滑处理的是**行**，上/下滑处理的是**列**。
+       两条都测，不然只测一个方向会漏掉 line 抽取/写回那对 switch 的另一半。 */
+    var bL = [[2,2,4,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    var resL = boardSlide(bL, 3);                       /* 3 = 左：按行走 */
+    var okL = (bL[0].join(",") === "4,4,0,0" && resL.gained === 4);
+    rows += "<tr><td class='num'>整盘往左（行）</td>" +
+            "<td class='num'>[4,4,0,0] 其余 0</td>" +
+            "<td class='num'>" + JSON.stringify(bL[0]) + "</td>" +
+            "<td class='" + (okL ? "ok" : "bad2") + "'>" + (okL ? "PASS" : "FAIL") + "</td></tr>";
+    if (okL) { pass++; }
+
+    var bU = [[2,0,0,0],[2,0,0,0],[4,0,0,0],[0,0,0,0]];
+    var resU = boardSlide(bU, 0);                       /* 0 = 上：按列走 */
+    var okU = (bU[0][0] === 4 && bU[1][0] === 4 && bU[2][0] === 0 && resU.gained === 4);
+    rows += "<tr><td class='num'>整盘往上（列）</td>" +
+            "<td class='num'>第 0 列 4,4,0,0</td>" +
+            "<td class='num'>" + JSON.stringify([bU[0][0],bU[1][0],bU[2][0],bU[3][0]]) + "</td>" +
+            "<td class='" + (okU ? "ok" : "bad2") + "'>" + (okU ? "PASS" : "FAIL") + "</td></tr>";
+    if (okU) { pass++; }
+
+    /* 错误版必须真的错 —— 否则这页"对错对比"就是假的。
+       两个错误版各验一条最能区分它的用例。 */
+    var bad1 = lineStepBad([2, 2, 4, 0]);
+    var bad2 = lineStepSkip2([4, 4, 2, 2]);
+    var okB1 = bad1.join(",") === "8,0,0,0";
+    var okB2 = bad2.join(",") === "8,2,2,0";
+    rows += "<tr><td class='num'>错① [2,2,4,0]</td>" +
+            "<td class='num'>[8,0,0,0]（故意错的）</td>" +
+            "<td class='num'>" + JSON.stringify(bad1) + "</td>" +
+            "<td class='" + (okB1 ? "ok" : "bad2") + "'>" + (okB1 ? "PASS" : "FAIL") + "</td></tr>";
+    rows += "<tr><td class='num'>错② [4,4,2,2]</td>" +
+            "<td class='num'>[8,2,2,0]（故意错的）</td>" +
+            "<td class='num'>" + JSON.stringify(bad2) + "</td>" +
+            "<td class='" + (okB2 ? "ok" : "bad2") + "'>" + (okB2 ? "PASS" : "FAIL") + "</td></tr>";
+    if (okB1) { pass++; }
+    if (okB2) { pass++; }
+
+    var total = cases.length + 4;
+    document.getElementById("selftest").innerHTML =
+      "<div class='" + (pass === total ? "good" : "badbox") + "' style='margin-bottom:10px'>" +
+      "<b>" + pass + " / " + total + " 通过</b>　" +
+      (pass === total
+        ? "合并规则、位移方向、以及两个错误版确实会错，都符合预期。"
+        : "有用例没过，先别信这一页。") +
+      "</div>" +
+      "<table><tr><th>输入</th><th>期望</th><th>实际</th><th>结果</th></tr>" + rows + "</table>";
+
+    window.__selftestFailed = (function () {
+      var out = [], pat = /<td class='num'>([^<]*)<\/td><td class='num'>([^<]*)<\/td><td class='num'>([^<]*)<\/td><td class='bad2'>FAIL<\/td>/g, mm;
+      while ((mm = pat.exec(rows)) !== null) { out.push(mm[1] + "->" + mm[3]); }
+      return out;
+    }());
+
+    return { pass: pass, total: total };
+  }
+
+  /* ============================================================
+   *  启动
+   * ============================================================ */
+  try { best = parseInt(localStorage.getItem("hsp-2048-best") || "0", 10) || 0; } catch (e) { best = 0; }
+
+  /* 观测口：给冒烟测试用。全是 ASCII，避免中文编码把测试搞成假错。
+     ⚠ 必须在第一次 render() 之前就把 __dbg 建好，否则首帧不会写进去。 */
+  window.__dbg = {};
+
+  /* 给自动化用的确定接口：直接摆盘、走一步、读全状态 */
+  window.__hsp2048 = {
+    lineStep: lineStep,
+    lineStepBad: lineStepBad,
+    lineStepSkip2: lineStepSkip2,
+    boardSlide: boardSlide,
+    selfTest: null,
+    setBoard: function (b) {
+      board = b.map(function (row) { return row.slice(); });
+      /* 分数也归零：这是一副"新摆的残局"，分数跟着重算，
+         否则界面上会留着上一局的分数，自检也没法写确定的期望值。
+         best（历史最佳）不动。 */
+      score = 0;
+      /* continued=false 是必须的：否则"摆一个 1024+1024 再划"测不出达成遮罩 */
+      over = false; won = false; continued = false; snap = null;
+      render(true);
+    },
+    /* 对应固件的 g2048_spawn <0|1> */
+    setSpawn: function (on) { spawnOn = !!on; },
+    move: function (dir) { doMove(dir); },
+    newGame: function () { newGame(); },
+    undo: function () { undo(); },
+    state: function () {
+      return {
+        score: score, best: best, over: over ? 1 : 0, won: won ? 1 : 0,
+        max: maxTile(),
+        tiles: board.map(function (row) { return row.join(","); }).join("|")
+      };
+    }
+  };
+
+  newGame();
+  renderCase(0);
+  window.__hsp2048.selfTest = runSelfTest();
+}());
+</script>
+</body>
+</html>

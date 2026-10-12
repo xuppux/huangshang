@@ -1,0 +1,26 @@
+Import('RTT_ROOT')
+Import('rtconfig')
+from building import *
+
+cwd = GetCurrentDir()
+# bat_mon.c：电池电压（ADC "bat1"/ch7）+ 充电状态（PMU CHG_SR，只读）。
+# 表盘右上角的电量图标用的就是它。无条件编进来 —— 里面的 ADC 设备是运行时
+# rt_device_find 的，找不到只会显示 "--%"，不会编译或链接失败。
+# swipe_back.c：右边缘「从右往左滑」触发返回上一页。
+# 原厂 SDK 只启用了左边缘手势（lvsf_gesture.c 里右侧检测条被 #if 0 注释掉），
+# 这个模块在工程侧补上右侧那条。识别到手势后调 gui_app_goback()，返回动画由
+# 框架自己播（触发式、不跟手 —— 为什么不用 gui_app_manual_animation_* 见文件头）。
+src = ['main.c', 'bat_mon.c', 'swipe_back.c']
+
+if GetDepend('BSP_BLE_SIBLES'):
+    src+=['ble_app.c', 'ble_ai.c']
+
+if GetDepend('BSP_BT_APP'):
+    src+=['bt_app.c']
+
+
+CPPPATH = [cwd]
+
+group = DefineGroup('App_utils', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')
